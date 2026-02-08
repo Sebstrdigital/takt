@@ -1,0 +1,33 @@
+{
+  "project": "TestApp",
+  "branchName": "dua/test-complete",
+  "description": "All done",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Done story 1",
+      "description": "Completed",
+      "acceptanceCriteria": ["Criterion 1"],
+      "priority": 1,
+      "size": "small",
+      "passes": true,
+      "model": "sonnet",
+      "verify": "inline",
+      "startTime": "2025-01-01 10:00",
+      "endTime": "2025-01-01 10:15"
+    },
+    {
+      "id": "US-002",
+      "title": "Done story 2",
+      "description": "Also completed",
+      "acceptanceCriteria": ["Criterion 2"],
+      "priority": 2,
+      "size": "medium",
+      "passes": true,
+      "model": "opus",
+      "verify": "deep",
+      "startTime": "2025-01-01 10:20",
+      "endTime": "2025-01-01 10:45"
+    }
+  ]
+}
