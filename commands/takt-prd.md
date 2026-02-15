@@ -14,25 +14,24 @@ Create detailed Product Requirements Documents that are clear, actionable, and s
 ## The Job
 
 1. Receive a feature description from the user
-2. Scan the codebase to understand existing architecture, patterns, and constraints
+2. Read the project's CLAUDE.md for architecture, conventions, and key files
 3. Ask targeted clarifying questions about genuine ambiguities (skip if the request is already clear)
-4. Generate a structured PRD based on codebase context and answers
+4. Generate a structured PRD based on project context and answers
 5. Save to `tasks/prd-[feature-name].md`
 
 **Important:** Do NOT start implementing. Just create the PRD.
 
 ---
 
-## Step 1: Codebase Scan
+## Step 1: Read Project Context
 
-Before asking any questions, scan the project to understand:
+Before asking any questions, read the project's **CLAUDE.md** to understand:
 
-- **Tech stack & frameworks** — What's already in use (DB, ORM, UI framework, test tools)?
-- **Existing patterns** — How are similar features structured? (routes, components, services, etc.)
-- **Integration points** — What existing code will the new feature touch or extend?
-- **Constraints** — Are there conventions, linting rules, or architectural boundaries to respect?
+- Tech stack, frameworks, and conventions
+- Key files and architecture
+- Any project-specific rules or constraints
 
-This context makes your questions specific and your PRD actionable. Reference what you found (e.g., "I see you're using Prisma with PostgreSQL and Next.js server actions — I'll plan around that").
+If the feature targets a specific area (e.g., "add a settings page"), also glance at the relevant directory to see what's already there. But don't do a broad codebase scan — CLAUDE.md should cover the big picture.
 
 ## Step 2: Clarifying Questions (Adaptive)
 
@@ -42,7 +41,7 @@ This context makes your questions specific and your PRD actionable. Reference wh
 
 - **No fixed count.** Ask 0 questions if the request is crystal clear. Ask 6 if it's genuinely ambiguous. The right number depends on the request.
 - **Implementation-focused.** Ask about technical decisions, not product basics the user already stated.
-- **Informed by the scan.** Reference what you found in the codebase — don't ask questions you could answer by reading the code.
+- **Informed by CLAUDE.md.** Reference what you know from the project context — don't ask questions you could answer by reading CLAUDE.md.
 - **Lettered options for speed.** When asking, provide options so users can respond with "1A, 2C" etc.
 
 ### Good questions (informed, specific):
@@ -65,7 +64,7 @@ This context makes your questions specific and your PRD actionable. Reference wh
 
 - "What is the primary goal?" — The user just told you.
 - "Who is the target user?" — Obvious from the feature description.
-- "What tech stack are you using?" — You just scanned the codebase.
+- "What tech stack are you using?" — It's in CLAUDE.md.
 
 ---
 
@@ -246,7 +245,7 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 Before saving the PRD:
 
-- [ ] Scanned codebase for architecture, patterns, and constraints
+- [ ] Read project CLAUDE.md for context
 - [ ] Asked clarifying questions only where genuinely ambiguous
 - [ ] Incorporated user's answers
 - [ ] User stories are small and specific
