@@ -96,6 +96,33 @@ echo "  takt Installer"
 echo "========================================="
 echo ""
 
+# --- Cleanup old dua-loop artifacts ---
+OLD_DUALOOP_DIR="$CLAUDE_DIR/lib/dualoop"
+if [ -d "$OLD_DUALOOP_DIR" ]; then
+    rm -rf "$OLD_DUALOOP_DIR"
+    echo -e "  ${YELLOW}removed${NC}  lib/dualoop/ (replaced by lib/takt/)"
+fi
+for old_cmd in dua.md dua-prd.md; do
+    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ]; then
+        rm -f "$CLAUDE_DIR/commands/$old_cmd"
+        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd"
+    fi
+done
+# Replace prefixed tdd if old version exists alongside takt version
+if [ -f "$CLAUDE_DIR/commands/takt-tdd.md" ] && [ -f "$CLAUDE_DIR/commands/tdd.md" ]; then
+    if grep -q "source_id: dua-loop" "$CLAUDE_DIR/commands/tdd.md" 2>/dev/null; then
+        rm -f "$CLAUDE_DIR/commands/tdd.md"
+        mv "$CLAUDE_DIR/commands/takt-tdd.md" "$CLAUDE_DIR/commands/tdd.md"
+        echo -e "  ${YELLOW}replaced${NC} tdd.md (old dua-loop version)"
+    fi
+fi
+# Remove old dua-loop section from CLAUDE.md if takt section also present
+if [ -f "$CLAUDE_MD" ] && grep -q "dua-loop - Autonomous Agent Loop" "$CLAUDE_MD" 2>/dev/null; then
+    sed -i '' '/## dua-loop - Autonomous Agent Loop/,/## takt/{ /## takt/!d; }' "$CLAUDE_MD"
+    echo -e "  ${YELLOW}cleaned${NC}  CLAUDE.md (removed old dua-loop section)"
+fi
+echo ""
+
 # --- takt core ---
 echo "takt -> $TAKT_DIR/"
 mkdir -p "$TAKT_DIR"
