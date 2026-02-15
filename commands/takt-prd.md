@@ -14,50 +14,62 @@ Create detailed Product Requirements Documents that are clear, actionable, and s
 ## The Job
 
 1. Receive a feature description from the user
-2. Ask 3-5 essential clarifying questions (with lettered options)
-3. Generate a structured PRD based on answers
-4. Save to `tasks/prd-[feature-name].md`
+2. Scan the codebase to understand existing architecture, patterns, and constraints
+3. Ask targeted clarifying questions about genuine ambiguities (skip if the request is already clear)
+4. Generate a structured PRD based on codebase context and answers
+5. Save to `tasks/prd-[feature-name].md`
 
 **Important:** Do NOT start implementing. Just create the PRD.
 
 ---
 
-## Step 1: Clarifying Questions
+## Step 1: Codebase Scan
 
-Ask only critical questions where the initial prompt is ambiguous. Focus on:
+Before asking any questions, scan the project to understand:
 
-- **Problem/Goal:** What problem does this solve?
-- **Core Functionality:** What are the key actions?
-- **Scope/Boundaries:** What should it NOT do?
-- **Success Criteria:** How do we know it's done?
+- **Tech stack & frameworks** — What's already in use (DB, ORM, UI framework, test tools)?
+- **Existing patterns** — How are similar features structured? (routes, components, services, etc.)
+- **Integration points** — What existing code will the new feature touch or extend?
+- **Constraints** — Are there conventions, linting rules, or architectural boundaries to respect?
 
-### Format Questions Like This:
+This context makes your questions specific and your PRD actionable. Reference what you found (e.g., "I see you're using Prisma with PostgreSQL and Next.js server actions — I'll plan around that").
+
+## Step 2: Clarifying Questions (Adaptive)
+
+**Only ask about genuine ambiguities.** If the user's description + codebase context already answers a question, skip it.
+
+### Rules:
+
+- **No fixed count.** Ask 0 questions if the request is crystal clear. Ask 6 if it's genuinely ambiguous. The right number depends on the request.
+- **Implementation-focused.** Ask about technical decisions, not product basics the user already stated.
+- **Informed by the scan.** Reference what you found in the codebase — don't ask questions you could answer by reading the code.
+- **Lettered options for speed.** When asking, provide options so users can respond with "1A, 2C" etc.
+
+### Good questions (informed, specific):
 
 ```
-1. What is the primary goal of this feature?
-   A. Improve user onboarding experience
-   B. Increase user retention
-   C. Reduce support burden
+1. I see you have a `notifications` table but no in-app notification UI yet.
+   Should this feature include an in-app notification center, or just email?
+   A. In-app only
+   B. Email only
+   C. Both
    D. Other: [please specify]
 
-2. Who is the target user?
-   A. New users only
-   B. Existing users only
-   C. All users
-   D. Admin users only
-
-3. What is the scope?
-   A. Minimal viable version
-   B. Full-featured implementation
-   C. Just the backend/API
-   D. Just the UI
+2. Your current auth uses NextAuth with session strategy.
+   Should the new admin role use the same session system or a separate JWT-based approach?
+   A. Same NextAuth sessions (simpler)
+   B. Separate JWT for admin (more isolated)
 ```
 
-This lets users respond with "1A, 2C, 3B" for quick iteration.
+### Bad questions (generic, answerable from context):
+
+- "What is the primary goal?" — The user just told you.
+- "Who is the target user?" — Obvious from the feature description.
+- "What tech stack are you using?" — You just scanned the codebase.
 
 ---
 
-## Step 2: PRD Structure
+## Step 3: PRD Structure
 
 Generate the PRD with these sections:
 
@@ -234,7 +246,8 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 Before saving the PRD:
 
-- [ ] Asked clarifying questions with lettered options
+- [ ] Scanned codebase for architecture, patterns, and constraints
+- [ ] Asked clarifying questions only where genuinely ambiguous
 - [ ] Incorporated user's answers
 - [ ] User stories are small and specific
 - [ ] Functional requirements are numbered and unambiguous
