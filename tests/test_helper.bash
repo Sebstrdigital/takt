@@ -1,4 +1,4 @@
-# test_helper.bash — shared setup for dualoop.bats
+# test_helper.bash — shared setup for takt.bats
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES_DIR="$TESTS_DIR/fixtures"
@@ -13,8 +13,8 @@ setup() {
   # Set PRD_FILE to temp location (tests override as needed)
   PRD_FILE="$TEST_TMPDIR/prd.json"
 
-  # Source dualoop.sh to get functions (source guard will return 0)
-  source "$TESTS_DIR/../bin/dualoop.sh"
+  # Source takt.sh to get functions (source guard will return 0)
+  source "$TESTS_DIR/../bin/takt.sh"
 }
 
 teardown() {

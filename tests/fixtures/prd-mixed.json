@@ -1,6 +1,6 @@
 {
   "project": "TestApp",
-  "branchName": "dua/test-mixed",
+  "branchName": "takt/test-mixed",
   "description": "Mixed feature",
   "userStories": [
     {

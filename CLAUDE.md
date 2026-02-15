@@ -2,81 +2,75 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What is dua-loop?
+## What is takt?
 
-dua-loop is an autonomous AI agent loop that implements features from a PRD (Product Requirements Document) without human intervention between iterations. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
+takt is an autonomous AI agent orchestrator with four modes: solo (sequential), team (parallel), debug (bug-fixing), and retro (retrospective). Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
 
-Each iteration spawns a **fresh Claude Code instance** with clean context. Memory persists via:
+Each mode spawns fresh Claude Code instances. Memory persists via:
 - **Git history** - commits from previous iterations
 - **prd.json** - tracks which stories are `passes: true/false`
-- **progress.txt** - append-only log of learnings between iterations
+- **workbook-US-XXX.md** - per-story implementation notes
+- **retro.md** - retrospective entries and active alerts
 
 ## Commands
 
 ```bash
-# Install globally (one-time, from dua-loop repo)
+# Install globally (one-time, from repo)
 ./install.sh
 
-# Initialize a project (from project directory)
-dualoop init
+# Initialize a project
+takt init
 
-# Run autonomous loop (default: auto-calculated iterations)
-dualoop [max_iterations]
+# Solo mode — sequential execution
+takt solo [max_iterations]
+
+# Team mode — parallel execution
+takt team
+
+# Debug mode — structured bug fixing
+takt debug "description"
+
+# Retro mode — generate retrospective
+takt retro
 
 # Check story status
 cat prd.json | jq '.userStories[] | {id, title, passes}'
-
-# View progress log
-cat progress.txt
 ```
 
 ## Architecture
 
-### Core Loop (`bin/dualoop.sh`)
-1. Reads `prd.json` for next incomplete story (lowest priority where `passes: false`)
-2. Spawns Claude Code with agent instructions from `~/.claude/lib/dualoop/prompt.md`
-3. Detects model and verify mode from story's `model` and `verify` fields
-4. On completion signal (`<promise>COMPLETE</promise>`), runs deep verification for stories with `verify: deep`
-5. Archives completed PRDs to `archive/YYYY-MM-DD-feature-name/`
+### Core Script (`bin/takt.sh`)
+Subcommand dispatch to four modes:
+- `takt solo` — wraps original loop logic, one story per iteration
+- `takt team` — launches Claude Code with team-lead prompt for parallel execution
+- `takt debug` — launches Claude Code with debug prompt for structured bug fixing
+- `takt retro` — launches Claude Code with retro prompt for retrospective generation
 
-### Key Files (source -> installed)
-- `bin/dualoop.sh` -> `~/.claude/lib/dualoop/dualoop.sh` - Main loop script
-- `lib/prompt.md` -> `~/.claude/lib/dualoop/prompt.md` - Agent instructions
-- `agents/verifier.md` -> `~/.claude/lib/dualoop/verifier.md` - Deep verification agent
-- `commands/*.md` -> `~/.claude/commands/` - Slash commands
+### Key Files (source → installed)
+- `bin/takt.sh` → `~/.claude/lib/takt/takt.sh` - Core script
+- `lib/prompt.md` → `~/.claude/lib/takt/prompt.md` - Solo agent instructions
+- `agents/verifier.md` → `~/.claude/lib/takt/verifier.md` - Deep verification agent
+- `lib/team-lead.md` → `~/.claude/lib/takt/team-lead.md` - Team scrum master prompt
+- `lib/worker.md` → `~/.claude/lib/takt/worker.md` - Team worker prompt
+- `lib/debug.md` → `~/.claude/lib/takt/debug.md` - Debug agent prompt
+- `lib/retro.md` → `~/.claude/lib/takt/retro.md` - Retro agent prompt
+- `commands/*.md` → `~/.claude/commands/` - Slash commands
 
 ### Slash Commands
-- `/dua-prd` - Generate PRDs from feature descriptions
-- `/dua` - Convert PRDs to `prd.json` format
+- `/takt` - Convert PRD to `prd.json` format (with waves and dependsOn for team mode)
+- `/takt-prd` - Generate PRDs from feature descriptions
 - `/tdd` - Test-Driven Development workflow
 
 ### Story Fields in prd.json
 - `model`: `"sonnet"` (default) or `"opus"` (for complex multi-file work)
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
-- `passes`: `false` -> `true` when story complete
+- `passes`: `false` → `true` when story complete
+- `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
 
-## dua-loop Agent Rules
-
-When running as a dua-loop agent (via `dualoop`):
-
-1. **ONE story per iteration** - Never continue to next story
-2. **TDD required** - Write failing tests first, then minimal code to pass
-3. **Goal-backward verification** - Verify OUTCOMES, not just code existence
-4. **Browser verification** for UI stories - Use Chrome integration
-5. **Append to progress.txt** - Include learnings for future iterations
-6. **Keep stories small** - Must fit in one context window (no auto-handoff)
-
-## Story Sizing Guidelines
-
-Stories must complete in ONE iteration:
-- Add a database column and migration
-- Add a UI component to an existing page
-- Update a server action with new logic
-
-Too big (split these):
-- "Build the entire dashboard"
-- "Add authentication"
-- "Refactor the API"
+### Team Mode: Waves
+- `waves` top-level field in prd.json groups stories by dependency
+- Wave N+1 doesn't start until Wave N is fully merged
+- Workers use git worktrees in `.worktrees/` for isolation
 
 ## Running Tests
 

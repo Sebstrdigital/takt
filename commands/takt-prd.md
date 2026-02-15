@@ -1,7 +1,7 @@
 ---
-name: dua-prd
+name: takt-prd
 description: "Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."
-source_id: dua-loop
+source_id: takt
 version: 1.0.0
 ---
 
@@ -252,11 +252,23 @@ Once you have saved the PRD file(s), present a summary and offer to continue:
 - tasks/prd-feature-name.md (X user stories)
 - tasks/prd-another-feature.md (Y user stories)  [if multiple]
 
-Would you like me to convert the first one to prd.json for dua-loop execution?
+Would you like me to convert the first one to prd.json for takt execution?
 ```
 
 If the user says yes:
-1. Use the `/dua` command
+1. Use the `/takt` command
 2. Convert the specified PRD to `prd.json`
 
 This creates a smooth handoff from planning to execution.
+
+---
+
+## Mode Suggestion
+
+After creating the PRD, suggest the appropriate takt mode:
+
+- **takt solo** — ≤5 stories, mostly linear dependencies, simple feature
+- **takt team** — 6+ stories, 2+ independent chains, parallelism pays off
+- **takt debug** — Bug fixing, strict verification discipline
+
+Include this in your summary after creating the PRD.

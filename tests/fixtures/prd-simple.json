@@ -1,6 +1,6 @@
 {
   "project": "TestApp",
-  "branchName": "dua/test-feature",
+  "branchName": "takt/test-feature",
   "description": "Test feature",
   "userStories": [
     {

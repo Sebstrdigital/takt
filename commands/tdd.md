@@ -1,7 +1,7 @@
 ---
 name: tdd
-description: "Test-Driven Development workflow for implementing user stories. Use when implementing features with dua-loop. Ensures code quality through red-green-refactor cycle. Triggers on: implement with tdd, test-driven development, tdd workflow."
-source_id: dua-loop
+description: "Test-Driven Development workflow for implementing user stories. Use when implementing features with takt. Ensures code quality through red-green-refactor cycle. Triggers on: implement with tdd, test-driven development, tdd workflow."
+source_id: takt
 version: 1.0.0
 ---
 
@@ -52,7 +52,7 @@ Never skip a step. Never write production code without a failing test.
 | UI Component | Renders correctly, interactions work, loading/error states, accessibility |
 | Integration | End-to-end flow, components integrate, data flows through system |
 
-## Integration with dua-loop
+## Integration with takt
 
 1. Read the story and check existing tests
 2. Plan test cases for each acceptance criterion

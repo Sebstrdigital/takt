@@ -1,15 +1,15 @@
 #!/bin/bash
 #
-# dua-loop Installer
+# takt Installer
 # Installs everything into ~/.claude/ so the repo can be deleted after install.
 #
 # Installed layout:
-#   ~/.claude/lib/dualoop/          # Loop script + supporting files
-#   ~/.claude/commands/             # Slash commands (/dua, /dua-prd, /tdd)
-#   ~/.claude/CLAUDE.md             # dua-loop section appended
+#   ~/.claude/lib/takt/             # Loop script + supporting files
+#   ~/.claude/commands/             # Slash commands (/takt, /takt-prd, /tdd)
+#   ~/.claude/CLAUDE.md             # takt section appended
 #
 # Safe install logic for commands:
-#   - If target file exists with source_id: dua-loop -> overwrite (update)
+#   - If target file exists with source_id: takt -> overwrite (update)
 #   - If target file exists WITHOUT that source_id -> install with prefix
 #   - If target file doesn't exist -> install as-is
 #   - Shows version changes on updates
@@ -18,10 +18,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SOURCE_ID="dua-loop"
+SOURCE_ID="takt"
 CLAUDE_DIR="$HOME/.claude"
-DUALOOP_DIR="$CLAUDE_DIR/lib/dualoop"
-PREFIX="dualoop-"
+TAKT_DIR="$CLAUDE_DIR/lib/takt"
+PREFIX="takt-"
 
 # Colors
 GREEN='\033[0;32m'
@@ -92,20 +92,28 @@ check_and_install() {
 
 echo ""
 echo "========================================="
-echo "  dua-loop Installer"
+echo "  takt Installer"
 echo "========================================="
 echo ""
 
-# --- dua-loop core ---
-echo "dua-loop -> $DUALOOP_DIR/"
-mkdir -p "$DUALOOP_DIR"
-cp "$SCRIPT_DIR/bin/dualoop.sh" "$DUALOOP_DIR/dualoop.sh"
-chmod +x "$DUALOOP_DIR/dualoop.sh"
-cp "$SCRIPT_DIR/lib/prompt.md" "$DUALOOP_DIR/prompt.md"
-cp "$SCRIPT_DIR/agents/verifier.md" "$DUALOOP_DIR/verifier.md"
-echo -e "  ${GREEN}copied${NC}   dualoop.sh"
+# --- takt core ---
+echo "takt -> $TAKT_DIR/"
+mkdir -p "$TAKT_DIR"
+cp "$SCRIPT_DIR/bin/takt.sh" "$TAKT_DIR/takt.sh"
+chmod +x "$TAKT_DIR/takt.sh"
+cp "$SCRIPT_DIR/lib/prompt.md" "$TAKT_DIR/prompt.md"
+cp "$SCRIPT_DIR/agents/verifier.md" "$TAKT_DIR/verifier.md"
+cp "$SCRIPT_DIR/lib/team-lead.md" "$TAKT_DIR/team-lead.md"
+cp "$SCRIPT_DIR/lib/worker.md" "$TAKT_DIR/worker.md"
+cp "$SCRIPT_DIR/lib/debug.md" "$TAKT_DIR/debug.md"
+cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
+echo -e "  ${GREEN}copied${NC}   takt.sh"
 echo -e "  ${GREEN}copied${NC}   prompt.md"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
+echo -e "  ${GREEN}copied${NC}   team-lead.md"
+echo -e "  ${GREEN}copied${NC}   worker.md"
+echo -e "  ${GREEN}copied${NC}   debug.md"
+echo -e "  ${GREEN}copied${NC}   retro.md"
 echo ""
 
 # --- Commands ---
@@ -118,23 +126,26 @@ echo ""
 # --- CLAUDE.md section ---
 echo "Config -> $CLAUDE_DIR/CLAUDE.md"
 CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
-if [ ! -f "$CLAUDE_MD" ] || ! grep -q "dua-loop" "$CLAUDE_MD" 2>/dev/null; then
+if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
     mkdir -p "$CLAUDE_DIR"
     cat >> "$CLAUDE_MD" << 'SECTION'
 
-## dua-loop - Autonomous Agent Loop
+## takt - Autonomous Agent Orchestrator
 
 Available globally. Use when a project has `prd.json`:
-- `dualoop` — run the autonomous loop (`~/.claude/lib/dualoop/dualoop.sh`)
-- `dualoop init` — scaffold a new project
-- `/dua-prd` — generate PRD from feature description
-- `/dua` — convert PRD to prd.json
+- `takt solo` — run stories sequentially (`~/.claude/lib/takt/takt.sh`)
+- `takt team` — run stories in parallel (multi-agent)
+- `takt debug` — strict bug-fixing discipline
+- `takt retro` — post-execution retrospective
+- `takt init` — scaffold a new project
+- `/takt-prd` — generate PRD from feature description
+- `/takt` — convert PRD to prd.json
 - `/tdd` — TDD workflow
 SECTION
-    echo -e "  ${GREEN}added${NC}    dua-loop section"
+    echo -e "  ${GREEN}added${NC}    takt section"
     installed=$((installed + 1))
 else
-    echo -e "  ${GRAY}current${NC}  dua-loop section already present"
+    echo -e "  ${GRAY}current${NC}  takt section already present"
     skipped=$((skipped + 1))
 fi
 echo ""

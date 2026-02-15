@@ -1,4 +1,4 @@
-# dua-loop Agent Instructions
+# takt Agent Instructions
 
 You are an autonomous coding agent. **You may only complete ONE user story per session.** After completing one story, STOP immediately. The system runs verification between stories.
 
@@ -35,6 +35,26 @@ You are an autonomous coding agent. **You may only complete ONE user story per s
 ```
 
 Do NOT log: file changes, implementation details, test counts, or story status.
+
+## Workbook
+
+After completing a story, create `workbook-<STORY-ID>.md` in the project root:
+
+```markdown
+# Workbook: <STORY-ID> - <Story Title>
+
+## Decisions
+- [Key decisions made during implementation]
+
+## Files Changed
+- [List of files created/modified]
+
+## Blockers Encountered
+- [Any issues hit and how they were resolved, or "None"]
+
+## Notes
+- [Anything useful for future iterations]
+```
 
 ## Verification
 

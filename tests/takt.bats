@@ -170,27 +170,114 @@ EOF
 
 # --- Init scaffolding ---
 
-@test "dualoop_init creates project scaffolding" {
+@test "takt_init creates project scaffolding" {
   cd "$TEST_TMPDIR"
-  dualoop_init > /dev/null
+  takt_init > /dev/null
   [ -f prd.json ]
   [ -f progress.txt ]
   [ -d tasks/archive ]
 }
 
-@test "dualoop_init does not overwrite existing prd.json" {
+@test "takt_init does not overwrite existing prd.json" {
   cd "$TEST_TMPDIR"
   echo '{"existing":true}' > prd.json
-  dualoop_init > /dev/null
+  takt_init > /dev/null
   local result
   result=$(jq -r '.existing' prd.json)
   [ "$result" = "true" ]
 }
 
-@test "dualoop_init adds gitignore entries" {
+@test "takt_init adds gitignore entries" {
   cd "$TEST_TMPDIR"
-  dualoop_init > /dev/null
+  takt_init > /dev/null
   grep -qxF ".last-branch" .gitignore
   grep -qxF ".original-branch" .gitignore
-  grep -qxF ".dualoop-stats.json" .gitignore
+  grep -qxF ".takt-stats.json" .gitignore
+}
+
+# --- Subcommand dispatch ---
+
+@test "help exits 0" {
+  run bash "$TESTS_DIR/../bin/takt.sh" help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"takt"* ]]
+}
+
+@test "no args exits 1" {
+  run bash "$TESTS_DIR/../bin/takt.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No command specified"* ]]
+}
+
+@test "unknown command exits 1" {
+  run bash "$TESTS_DIR/../bin/takt.sh" foobar
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unknown command"* ]]
+}
+
+@test "--help flag exits 0" {
+  run bash "$TESTS_DIR/../bin/takt.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage:"* ]]
+}
+
+@test "-h flag exits 0" {
+  run bash "$TESTS_DIR/../bin/takt.sh" -h
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage:"* ]]
+}
+
+@test "help output lists all commands" {
+  run bash "$TESTS_DIR/../bin/takt.sh" help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"solo"* ]]
+  [[ "$output" == *"team"* ]]
+  [[ "$output" == *"debug"* ]]
+  [[ "$output" == *"retro"* ]]
+  [[ "$output" == *"init"* ]]
+}
+
+@test "team errors without prd.json" {
+  cd "$TEST_TMPDIR"
+  run bash "$TESTS_DIR/../bin/takt.sh" team
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No prd.json found"* ]]
+}
+
+@test "team errors without waves in prd.json" {
+  cd "$TEST_TMPDIR"
+  echo '{"userStories":[]}' > prd.json
+  run bash "$TESTS_DIR/../bin/takt.sh" team
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"missing 'waves' field"* ]]
+}
+
+@test "team errors with empty waves" {
+  cd "$TEST_TMPDIR"
+  echo '{"userStories":[],"waves":[]}' > prd.json
+  run bash "$TESTS_DIR/../bin/takt.sh" team
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"empty waves"* ]]
+}
+
+@test "debug with no args and no bugs.json shows usage" {
+  cd "$TEST_TMPDIR"
+  run bash "$TESTS_DIR/../bin/takt.sh" debug
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage: takt debug"* ]]
+}
+
+@test "retro with no workbooks shows error" {
+  cd "$TEST_TMPDIR"
+  run bash "$TESTS_DIR/../bin/takt.sh" retro
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No workbook files found"* ]]
+}
+
+@test "all mode functions are sourceable" {
+  type takt_team | grep -q "function"
+  type takt_debug | grep -q "function"
+  type takt_retro | grep -q "function"
+  type takt_help | grep -q "function"
+  type takt_solo | grep -q "function"
 }

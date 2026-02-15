@@ -1,1 +1,5 @@
 .DS_Store
+.worktrees/
+.takt-stats.json
+workbook-*.md
+/retro.md

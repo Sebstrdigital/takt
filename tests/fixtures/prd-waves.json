@@ -1,0 +1,16 @@
+{
+  "project": "WaveTest",
+  "branchName": "takt/wave-test",
+  "description": "Test fixture with wave planning",
+  "userStories": [
+    {"id": "US-001", "title": "Foundation", "passes": false, "priority": 1, "size": "small", "model": "sonnet", "verify": "inline", "dependsOn": []},
+    {"id": "US-002", "title": "Backend", "passes": false, "priority": 2, "size": "medium", "model": "sonnet", "verify": "inline", "dependsOn": ["US-001"]},
+    {"id": "US-003", "title": "Frontend", "passes": false, "priority": 3, "size": "medium", "model": "sonnet", "verify": "inline", "dependsOn": ["US-001"]},
+    {"id": "US-004", "title": "Integration", "passes": false, "priority": 4, "size": "large", "model": "opus", "verify": "deep", "dependsOn": ["US-002", "US-003"]}
+  ],
+  "waves": [
+    {"wave": 1, "stories": ["US-001"]},
+    {"wave": 2, "stories": ["US-002", "US-003"]},
+    {"wave": 3, "stories": ["US-004"]}
+  ]
+}

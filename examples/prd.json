@@ -1,6 +1,6 @@
 {
   "project": "MyApp",
-  "branchName": "dua/task-priority",
+  "branchName": "takt/task-priority",
   "description": "Task Priority System - Add priority levels to tasks",
   "userStories": [
     {
@@ -18,7 +18,8 @@
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": []
     },
     {
       "id": "US-002",
@@ -36,7 +37,8 @@
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-001"]
     },
     {
       "id": "US-003",
@@ -55,7 +57,8 @@
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-001"]
     },
     {
       "id": "US-004",
@@ -74,7 +77,13 @@
       "model": "sonnet",
       "verify": "deep",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-002", "US-003"]
     }
+  ],
+  "waves": [
+    { "wave": 1, "stories": ["US-001"] },
+    { "wave": 2, "stories": ["US-002", "US-003"] },
+    { "wave": 3, "stories": ["US-004"] }
   ]
 }

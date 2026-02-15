@@ -1,13 +1,13 @@
 ---
-name: dua
-description: "Convert PRDs to prd.json format for the dua-loop autonomous agent system. Use when you have an existing PRD and need to convert it to dua-loop's JSON format. Triggers on: convert this prd, turn this into dualoop format, create prd.json from this, dua json."
-source_id: dua-loop
+name: takt
+description: "Convert PRDs to prd.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create prd.json from this, takt json."
+source_id: takt
 version: 1.0.0
 ---
 
-# dua-loop PRD Converter
+# takt PRD Converter
 
-Converts existing PRDs to the prd.json format that dua-loop uses for autonomous execution.
+Converts existing PRDs to the prd.json format that takt uses for autonomous execution.
 
 ---
 
@@ -22,7 +22,7 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in the project r
 ```json
 {
   "project": "[Project Name]",
-  "branchName": "dua/[feature-name-kebab-case]",
+  "branchName": "takt/[feature-name-kebab-case]",
   "description": "[Feature description from PRD title/intro]",
   "userStories": [
     {
@@ -41,9 +41,11 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in the project r
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": []
     }
-  ]
+  ],
+  "waves": []
 }
 ```
 
@@ -96,7 +98,7 @@ Each story has a `verify` field controlling how verification happens. This is a 
 
 **How it works:**
 - `"verify": "inline"` - Agent verifies own work using Goal-Backward Verification in prompt.md (~0 extra tokens)
-- `"verify": "deep"` - After all stories complete, dua-loop spawns a separate verifier agent to independently confirm goals achieved (~50k-100k tokens)
+- `"verify": "deep"` - After all stories complete, takt spawns a separate verifier agent to independently confirm goals achieved (~50k-100k tokens)
 
 **Auto-assignment rule:** If you assign `"model": "opus"`, also assign `"verify": "deep"`. They go together.
 
@@ -105,6 +107,52 @@ Each story has a `verify` field controlling how verification happens. This is a 
 - 1-2 stories: `"verify": "deep"` (~100k-200k extra tokens total)
 
 This keeps verification thorough where it matters without burning tokens on simple stories.
+
+---
+
+## Wave Planning (Team Mode)
+
+When the PRD has 6+ stories with 2+ independent dependency chains, add wave planning for `takt team` mode.
+
+### dependsOn Field
+
+Each story can have a `dependsOn` array listing story IDs it requires:
+
+```json
+{
+  "id": "US-003",
+  "dependsOn": ["US-001", "US-002"],
+  ...
+}
+```
+
+Stories without dependencies have `"dependsOn": []`.
+
+### waves Field
+
+Add a top-level `waves` array computed from `dependsOn`:
+
+```json
+{
+  "waves": [
+    { "wave": 1, "stories": ["US-001", "US-003", "US-005"] },
+    { "wave": 2, "stories": ["US-002", "US-004"] }
+  ]
+}
+```
+
+**Wave computation rules:**
+1. Wave 1: All stories with no dependencies (`dependsOn: []`)
+2. Wave N+1: Stories whose dependencies are ALL in waves 1 through N
+3. Stories in the same wave can run in parallel
+4. Wave N+1 doesn't start until Wave N is fully merged
+
+### When to Add Waves
+
+- **Add waves** when: 6+ stories, 2+ independent chains, parallelism benefits
+- **Skip waves** when: ≤5 stories, linear dependencies, simple feature → use `takt solo`
+
+Include a note after the summary: "If waves are present, suggest `takt team` over `takt solo`."
 
 ---
 
@@ -144,7 +192,7 @@ Each story has a `type` field controlling the implementation workflow.
 
 ## Story Size Assignment
 
-Each story has a `size` field used for progress tracking and ETA estimation. dua-loop tracks completion times per size category to improve estimates over time.
+Each story has a `size` field used for progress tracking and ETA estimation. takt tracks completion times per size category to improve estimates over time.
 
 **Values:** `"small"`, `"medium"`, `"large"`
 
@@ -161,16 +209,16 @@ Each story has a `size` field used for progress tracking and ETA estimation. dua
 - Stories with `"model": "opus"` are typically `"medium"` or `"large"`
 
 **Time tracking fields:**
-- `startTime` and `endTime` are populated by dua-loop during execution
+- `startTime` and `endTime` are populated by takt during execution
 - Leave them as empty strings (`""`) when creating prd.json
 
 ---
 
 ## Story Scope: The Number One Rule
 
-**Each story must be completable in ONE dua-loop iteration (one context window).**
+**Each story must be completable in ONE takt iteration (one context window).**
 
-dua-loop spawns a fresh Claude Code instance per iteration with no memory of previous work. If a story is too big, the LLM runs out of context before finishing and produces broken code.
+takt spawns a fresh Claude Code instance per iteration with no memory of previous work. If a story is too big, the LLM runs out of context before finishing and produces broken code.
 
 ### Right-sized stories:
 - Add a database column and migration
@@ -205,7 +253,7 @@ Stories execute in priority order. Earlier stories must not depend on later ones
 
 ## Acceptance Criteria: Must Be Verifiable
 
-Each criterion must be something dua-loop can CHECK, not something vague.
+Each criterion must be something takt can CHECK, not something vague.
 
 ### Good criteria (verifiable):
 - "Add `status` column to tasks table with default 'pending'"
@@ -235,7 +283,7 @@ For stories with testable logic, also include:
 "Verify in browser using Chrome integration"
 ```
 
-Frontend stories are NOT complete until visually verified. dua-loop will use Chrome browser integration to navigate to the page, interact with the UI, and confirm changes work.
+Frontend stories are NOT complete until visually verified. takt will use Chrome browser integration to navigate to the page, interact with the UI, and confirm changes work.
 
 ---
 
@@ -245,13 +293,15 @@ Frontend stories are NOT complete until visually verified. dua-loop will use Chr
 2. **IDs**: Sequential (US-001, US-002, etc.)
 3. **Priority**: Based on dependency order, then document order
 4. **All stories**: `passes: false`
-5. **branchName**: Derive from PRD filename, kebab-case, prefixed with `dua/` (e.g., `prd-dark-mode.md` → `dua/dark-mode`)
+5. **branchName**: Derive from PRD filename, kebab-case, prefixed with `takt/` (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 7. **Type assignment**: Assign `"logic"` (TDD), `"ui"` (build-only), or `"hybrid"` based on story content (see Story Type section)
 8. **Model assignment**: Evaluate each story's complexity and assign `"sonnet"` (default) or `"opus"` (see Model Assignment section)
 9. **Verify assignment**: Set `"verify": "deep"` for opus stories and the final story; otherwise `"verify": "inline"`
 10. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
 11. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
+12. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
+13. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
 
 ---
 
@@ -293,7 +343,7 @@ Add ability to mark tasks with different statuses.
 ```json
 {
   "project": "TaskApp",
-  "branchName": "dua/task-status",
+  "branchName": "takt/task-status",
   "description": "Task Status Feature - Track task progress with status indicators",
   "userStories": [
     {
@@ -312,7 +362,8 @@ Add ability to mark tasks with different statuses.
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": []
     },
     {
       "id": "US-002",
@@ -330,7 +381,8 @@ Add ability to mark tasks with different statuses.
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-001"]
     },
     {
       "id": "US-003",
@@ -349,7 +401,8 @@ Add ability to mark tasks with different statuses.
       "model": "sonnet",
       "verify": "inline",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-001"]
     },
     {
       "id": "US-004",
@@ -367,8 +420,14 @@ Add ability to mark tasks with different statuses.
       "model": "sonnet",
       "verify": "deep",
       "startTime": "",
-      "endTime": ""
+      "endTime": "",
+      "dependsOn": ["US-002", "US-003"]
     }
+  ],
+  "waves": [
+    { "wave": 1, "stories": ["US-001"] },
+    { "wave": 2, "stories": ["US-002", "US-003"] },
+    { "wave": 3, "stories": ["US-004"] }
   ]
 }
 ```
@@ -384,13 +443,13 @@ Note:
 
 ## PRD File Naming Convention
 
-The PRD filename and branchName must match so dua-loop can archive the correct file on completion:
+The PRD filename and branchName must match so takt can archive the correct file on completion:
 
 - PRD file: `tasks/prd-dark-mode.md`
-- branchName: `dua/dark-mode`
+- branchName: `takt/dark-mode`
 
-**On completion**, dua-loop derives the PRD filename from branchName and moves it to archive:
-- `dua/dark-mode` → looks for `tasks/prd-dark-mode.md`
+**On completion**, takt derives the PRD filename from branchName and moves it to archive:
+- `takt/dark-mode` → looks for `tasks/prd-dark-mode.md`
 - Moves to: `tasks/archive/YYYY-MM-DD-dark-mode/prd-dark-mode.md`
 
 ---
@@ -399,7 +458,7 @@ The PRD filename and branchName must match so dua-loop can archive the correct f
 
 Before writing prd.json, verify:
 
-- [ ] **branchName matches PRD filename** (e.g., `prd-dark-mode.md` → `dua/dark-mode`)
+- [ ] **branchName matches PRD filename** (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
@@ -411,6 +470,8 @@ Before writing prd.json, verify:
 - [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for opus stories and final story)
 - [ ] **Size assigned** to each story (`"small"`, `"medium"`, or `"large"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
+- [ ] **dependsOn** set for each story (empty array if no dependencies)
+- [ ] **waves** computed if 6+ stories with independent chains
 
 ---
 
@@ -421,20 +482,20 @@ Once you have saved `prd.json`, present a summary and offer to start the loop:
 ```
 ✅ prd.json ready!
 
-Branch: dua/feature-name
+Branch: takt/feature-name
 Stories: X total (Y small, Z medium, W large)
   - US-001: [title] (small, sonnet, inline)
   - US-002: [title] (small, sonnet, inline)
   - US-003: [title] (medium, sonnet, deep) ← final verification
 
-Would you like me to start the dua-loop?
+Would you like me to start the takt?
 This will:
-1. Create the feature branch (dua/feature-name)
+1. Create the feature branch (takt/feature-name)
 2. Run all stories autonomously
 3. Ask about merge/PR when complete
 ```
 
 If the user says yes:
-1. Run `dualoop` (it handles branch creation automatically)
+1. Run `takt` (it handles branch creation automatically)
 
 **Note:** The user can review prd.json before starting. This is their last checkpoint before autonomous execution begins.
