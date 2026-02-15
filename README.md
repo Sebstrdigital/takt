@@ -43,13 +43,22 @@ Best for: small features (2-5 stories), linear dependencies, quick delivery.
 
 ### takt team — Parallel Delivery
 
-Multi-agent team execution modeled on how real engineering teams work. A scrum master (Opus) orchestrates worker agents implementing stories in parallel, each in their own git worktree. Stories are grouped into waves based on their dependency graph — Wave N+1 doesn't start until Wave N is fully merged and tested.
+Multi-agent team execution modeled on how real engineering teams work.
 
 ```bash
 takt team              # Launch team execution
 ```
 
-The scrum master never writes code. It spawns workers, monitors progress, plans merge order by reading workbooks for file overlap, resolves conflicts by consulting the original author (still idle with context), and runs tests after every merge.
+**How it works:**
+
+1. **Wave planning** — The scrum master reads `prd.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
+2. **Worktree isolation** — Each worker gets its own git worktree (`.worktrees/<story-id>/`), so agents work in parallel without stepping on each other's files.
+3. **Parallel implementation** — Workers implement their stories with TDD, each writing a `workbook-US-XXX.md` with decisions, files changed, and blockers.
+4. **Merge planning** — When a wave's workers finish, the scrum master reads their workbooks to identify file overlaps and plans the merge order to minimize conflicts.
+5. **Sequential merge** — Stories are merged into main one by one. Tests run after each merge. If a conflict arises, the scrum master consults the original author (still idle with full context) to resolve it.
+6. **Cleanup** — Worktrees are removed after successful merge. Next wave begins.
+
+The scrum master never writes code. It orchestrates, monitors, plans merges, and resolves conflicts.
 
 Best for: larger features (6+ stories), multiple independent chains, complex PRDs where parallelism pays off.
 
