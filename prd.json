@@ -94,7 +94,7 @@
       ],
       "priority": 5,
       "size": "medium",
-      "passes": false,
+      "passes": true,
       "model": "sonnet",
       "verify": "deep",
       "startTime": "",
