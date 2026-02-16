@@ -132,14 +132,16 @@ echo ""
 echo "takt -> $TAKT_DIR/"
 mkdir -p "$TAKT_DIR"
 cp "$SCRIPT_DIR/lib/solo.md" "$TAKT_DIR/solo.md"
-cp "$SCRIPT_DIR/lib/prompt.md" "$TAKT_DIR/prompt.md"
+# prompt.md removed in v2 — solo.md + worker.md replace it
+if [ -f "$TAKT_DIR/prompt.md" ]; then
+    rm -f "$TAKT_DIR/prompt.md"
+fi
 cp "$SCRIPT_DIR/agents/verifier.md" "$TAKT_DIR/verifier.md"
 cp "$SCRIPT_DIR/lib/team-lead.md" "$TAKT_DIR/team-lead.md"
 cp "$SCRIPT_DIR/lib/worker.md" "$TAKT_DIR/worker.md"
 cp "$SCRIPT_DIR/lib/debug.md" "$TAKT_DIR/debug.md"
 cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
 echo -e "  ${GREEN}copied${NC}   solo.md"
-echo -e "  ${GREEN}copied${NC}   prompt.md"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
 echo -e "  ${GREEN}copied${NC}   team-lead.md"
 echo -e "  ${GREEN}copied${NC}   worker.md"

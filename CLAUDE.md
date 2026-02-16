@@ -42,7 +42,6 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 
 ### Key Files (source -> installed)
 - `lib/solo.md` -> `~/.claude/lib/takt/solo.md` - Solo orchestrator prompt
-- `lib/prompt.md` -> `~/.claude/lib/takt/prompt.md` - Solo worker instructions
 - `agents/verifier.md` -> `~/.claude/lib/takt/verifier.md` - Deep verification agent
 - `lib/team-lead.md` -> `~/.claude/lib/takt/team-lead.md` - Team scrum master prompt
 - `lib/worker.md` -> `~/.claude/lib/takt/worker.md` - Team worker prompt

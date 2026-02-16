@@ -86,8 +86,8 @@ When all waves are done:
 ```bash
 # Remove all worktrees
 rm -rf .worktrees/
-# Remove any lingering takt branches
-git branch --list 'takt/*' | xargs -r git branch -D
+# Remove worker branches (but NOT the feature branch you're on)
+git branch --list 'takt/*' | grep -v "$(git branch --show-current)" | xargs -r git branch -D
 ```
 4. Output: `<promise>COMPLETE</promise>`
 5. Suggest: "Run `takt retro` to generate a retrospective from the workbooks."

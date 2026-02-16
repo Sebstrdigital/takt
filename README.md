@@ -126,7 +126,6 @@ cd takt && git pull && ./install.sh
 ~/.claude/
 ├── lib/takt/
 │   ├── solo.md               # Solo orchestrator prompt
-│   ├── prompt.md             # Solo worker instructions
 │   ├── verifier.md           # Deep verification agent
 │   ├── team-lead.md          # Team mode scrum master prompt
 │   ├── worker.md             # Team mode worker prompt
