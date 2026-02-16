@@ -1,0 +1,110 @@
+{
+  "project": "takt",
+  "branchName": "takt/takt-v2-native",
+  "description": "Rewrite takt to run natively inside Claude Code using Task/TeamCreate instead of claude -p shell-outs",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create solo orchestrator prompt",
+      "description": "As a user, I want to say 'takt solo' in Claude Code and have it autonomously implement all stories in prd.json sequentially.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "New lib/solo.md prompt that reads prd.json and loops through incomplete stories by priority",
+        "Each story spawns a fresh Task agent (subagent_type: general-purpose, mode: bypassPermissions) with worker.md instructions",
+        "Orchestrator updates prd.json (passes: true) after each story completes — workers don't touch prd.json",
+        "After all stories pass, runs deep verification for stories marked verify: deep, then outputs <promise>COMPLETE</promise>"
+      ],
+      "priority": 1,
+      "size": "medium",
+      "passes": true,
+      "model": "sonnet",
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-002",
+      "title": "Fix worker and team-lead prompts for native execution",
+      "description": "As an orchestrator agent, I want workers that execute cleanly in Claude Code without causing CWD drift, artifact pollution, or wrong agent types.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "worker.md: remove prd.json update step, add NEVER use cd rule with absolute paths, write workbooks to .takt/workbooks/",
+        "team-lead.md: specify general-purpose agent type with bypassPermissions for workers, centralize prd.json updates in team lead only, add .worktrees/ cleanup on completion",
+        "Neither prompt references claude -p, custom agent types, or takt.sh"
+      ],
+      "priority": 2,
+      "size": "small",
+      "passes": true,
+      "model": "sonnet",
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-003",
+      "title": "Update retro agent with workbook cleanup",
+      "description": "As a user, I want retro to consume workbooks and then delete them so they don't accumulate across runs.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "retro.md: read workbooks from .takt/workbooks/, write retro entry to .takt/retro.md",
+        "After writing retro entry, delete all workbook-*.md files from .takt/workbooks/",
+        "If no workbooks found, report clearly and exit without creating empty retro entry"
+      ],
+      "priority": 3,
+      "size": "small",
+      "passes": true,
+      "model": "sonnet",
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "",
+      "dependsOn": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Leaner PRD generation",
+      "description": "As a user, I want /takt-prd to produce tighter PRDs that don't over-specify, so agents implement the right amount of code.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "Max 3-4 acceptance criteria per story enforced in prompt — typecheck passes is assumed, not listed",
+        "Add guidance: prefer fewer stories with broader scope over many tiny stories",
+        "Add anti-pattern examples: don't create separate stories for documentation or config files"
+      ],
+      "priority": 4,
+      "size": "small",
+      "passes": true,
+      "model": "sonnet",
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-005",
+      "title": "Remove takt.sh and update distribution",
+      "description": "As a maintainer, I want to remove the dead bash infrastructure and update docs to reflect the native execution model.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "Delete bin/takt.sh, tests/takt.bats, tests/test_helper.bash, tests/fixtures/",
+        "Update install.sh to install lib/solo.md and remove bin/takt.sh references",
+        "Update CLAUDE.md and README.md to document native execution model"
+      ],
+      "priority": 5,
+      "size": "medium",
+      "passes": false,
+      "model": "sonnet",
+      "verify": "deep",
+      "startTime": "",
+      "endTime": "",
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ]
+    }
+  ],
+  "waves": []
+}
