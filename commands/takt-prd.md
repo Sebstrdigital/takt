@@ -84,7 +84,18 @@ Each story needs:
 - **Description:** "As a [user], I want [feature] so that [benefit]"
 - **Acceptance Criteria:** Verifiable checklist of what "done" means
 
-Each story should be small enough to implement in one focused session.
+#### Story Scope
+
+- **Prefer fewer stories with broader scope** over many tiny stories. A single story can touch 3-4 files — that's fine.
+- **Aim for 3-5 stories** for most features, not 7-10.
+- **Roll ancillary work into the story that needs it.** If a story requires a config file, migration, or doc update, that's part of the story — not a separate story.
+
+#### Acceptance Criteria Rules
+
+- **Max 3-4 acceptance criteria per story.** Each criterion should describe a real behavior or outcome.
+- **"Typecheck passes" and "lint passes" are ASSUMED** for every story — never list them as explicit criteria.
+- Criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
+- **For any story with UI changes:** Always include "Verify in browser using Chrome integration" as one of the criteria.
 
 **Format:**
 ```markdown
@@ -92,15 +103,18 @@ Each story should be small enough to implement in one focused session.
 **Description:** As a [user], I want [feature] so that [benefit].
 
 **Acceptance Criteria:**
-- [ ] Specific verifiable criterion
-- [ ] Another criterion
-- [ ] Typecheck/lint passes
+- [ ] Specific verifiable behavior or outcome
+- [ ] Another criterion (max 3-4 total)
 - [ ] **[UI stories only]** Verify in browser using Chrome integration
 ```
 
-**Important:** 
-- Acceptance criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
-- **For any story with UI changes:** Always include "Verify in browser using Chrome integration" as acceptance criteria. This ensures visual verification of frontend work.
+#### Anti-Patterns (What NOT to Do)
+
+- **BAD: Separate story for documentation.** Roll doc updates into the story they document.
+- **BAD: Separate story for config files or migrations.** Roll into the story that needs them.
+- **BAD: 7+ acceptance criteria per story.** Trim to the 3-4 that actually matter.
+- **BAD: "Typecheck passes" as an explicit AC.** It's assumed for every story.
+- **BAD: 7-10 tiny stories for a feature that could be 3-4 broader ones.** Fewer stories = less overhead, faster delivery.
 
 ### 4. Functional Requirements
 Numbered list of specific functionalities:
@@ -159,61 +173,46 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 
 ## Introduction
 
-Add priority levels to tasks so users can focus on what matters most. Tasks can be marked as high, medium, or low priority, with visual indicators and filtering to help users manage their workload effectively.
+Add priority levels to tasks so users can focus on what matters most. Tasks can be marked as high, medium, or low priority, with visual indicators and filtering.
 
 ## Goals
 
 - Allow assigning priority (high/medium/low) to any task
 - Provide clear visual differentiation between priority levels
 - Enable filtering and sorting by priority
-- Default new tasks to medium priority
 
 ## User Stories
 
-### US-001: Add priority field to database
-**Description:** As a developer, I need to store task priority so it persists across sessions.
+### US-001: Priority field and display
+**Description:** As a user, I want tasks to have a visible priority level so I can see what needs attention first.
 
 **Acceptance Criteria:**
-- [ ] Add priority column to tasks table: 'high' | 'medium' | 'low' (default 'medium')
-- [ ] Generate and run migration successfully
-- [ ] Typecheck passes
-
-### US-002: Display priority indicator on task cards
-**Description:** As a user, I want to see task priority at a glance so I know what needs attention first.
-
-**Acceptance Criteria:**
+- [ ] Priority column added to tasks table ('high' | 'medium' | 'low', default 'medium')
 - [ ] Each task card shows colored priority badge (red=high, yellow=medium, gray=low)
-- [ ] Priority visible without hovering or clicking
-- [ ] Typecheck passes
 - [ ] Verify in browser using Chrome integration
 
-### US-003: Add priority selector to task edit
-**Description:** As a user, I want to change a task's priority when editing it.
+### US-002: Set and change priority
+**Description:** As a user, I want to set or change a task's priority so I can reprioritize as things evolve.
 
 **Acceptance Criteria:**
-- [ ] Priority dropdown in task edit modal
-- [ ] Shows current priority as selected
+- [ ] Priority dropdown in task edit modal, pre-selected to current value
 - [ ] Saves immediately on selection change
-- [ ] Typecheck passes
 - [ ] Verify in browser using Chrome integration
 
-### US-004: Filter tasks by priority
-**Description:** As a user, I want to filter the task list to see only high-priority items when I'm focused.
+### US-003: Filter and sort by priority
+**Description:** As a user, I want to filter the task list by priority so I can focus on high-priority items.
 
 **Acceptance Criteria:**
 - [ ] Filter dropdown with options: All | High | Medium | Low
 - [ ] Filter persists in URL params
-- [ ] Empty state message when no tasks match filter
-- [ ] Typecheck passes
-- [ ] Verify in browser using Chrome integration
+- [ ] Tasks sorted by priority within each status column (high → medium → low)
 
 ## Functional Requirements
 
 - FR-1: Add `priority` field to tasks table ('high' | 'medium' | 'low', default 'medium')
 - FR-2: Display colored priority badge on each task card
 - FR-3: Include priority selector in task edit modal
-- FR-4: Add priority filter dropdown to task list header
-- FR-5: Sort by priority within each status column (high to medium to low)
+- FR-4: Add priority filter/sort to task list
 
 ## Non-Goals
 
@@ -225,17 +224,14 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 - Reuse existing badge component with color variants
 - Filter state managed via URL search params
-- Priority stored in database, not computed
 
 ## Success Metrics
 
 - Users can change priority in under 2 clicks
 - High-priority tasks immediately visible at top of lists
-- No regression in task list performance
 
 ## Open Questions
 
-- Should priority affect task ordering within a column?
 - Should we add keyboard shortcuts for priority changes?
 ```
 
@@ -248,7 +244,8 @@ Before saving the PRD:
 - [ ] Read project CLAUDE.md for context
 - [ ] Asked clarifying questions only where genuinely ambiguous
 - [ ] Incorporated user's answers
-- [ ] User stories are small and specific
+- [ ] 3-5 stories with broad scope (not 7-10 tiny ones)
+- [ ] Max 3-4 acceptance criteria per story, no boilerplate
 - [ ] Functional requirements are numbered and unambiguous
 - [ ] Non-goals section defines clear boundaries
 - [ ] Saved to `tasks/prd-[feature-name].md`
