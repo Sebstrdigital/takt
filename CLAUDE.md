@@ -60,7 +60,6 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `/tdd` - Test-Driven Development workflow
 
 ### Story Fields in prd.json
-- `model`: `"sonnet"` (default) or `"opus"` (for complex multi-file work)
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
 - `passes`: `false` -> `true` when story complete
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)

@@ -97,14 +97,6 @@ Suggested automatically after each solo or team run completes. The value of retr
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command |
 | `tasks/archive/` | Completed PRDs, auto-archived on finish | Solo/team orchestrator |
 
-## Team Mode — Roles & Models
-
-| Role | Model | Responsibility |
-|------|-------|---------------|
-| Scrum master | Opus 4.6 | Orchestration, wave execution, merge planning. **Never writes code.** |
-| Senior dev | Opus 4.5 | Complex stories: multi-file refactors, architectural changes |
-| Dev | Sonnet 4.5 | Standard stories (~80-90% of work). Cost-effective, reliable. |
-
 ## Installation
 
 ```bash

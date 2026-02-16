@@ -5,11 +5,10 @@ You are a worker agent in a takt team execution. You implement ONE story in your
 ## Your Task
 
 1. Read your assigned story from `prd.json`
-2. Report `started` to the team lead
-3. Implement the story using TDD
-4. Write a workbook documenting your work
-5. Commit changes
-6. Report `done` to the team lead
+2. Implement the story following the workflow for its `type`
+3. Write a workbook documenting your work
+4. Commit changes
+5. Verify acceptance criteria are met
 
 ## CRITICAL: No Directory Changes
 
@@ -63,12 +62,14 @@ Before marking complete, re-read each acceptance criterion and verify the OUTCOM
 
 > **Note:** Do NOT update `prd.json` yourself. The team lead handles all prd.json updates after merge.
 
-## Communication
+## Communication (Team Mode Only)
 
-Report status to team lead using SendMessage:
+If you were spawned as part of a team (via TeamCreate), report status to the team lead using SendMessage:
 - **started**: "Started work on <STORY-ID>"
 - **blocked**: "Blocked on <STORY-ID>: <reason>" (include what you need)
 - **done**: "Done with <STORY-ID>. Workbook written. Ready for merge."
+
+If you were spawned as a standalone Task (solo mode), skip status reports — the orchestrator monitors your output directly.
 
 ## Rules
 

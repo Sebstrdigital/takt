@@ -38,7 +38,6 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in the project r
       "priority": 1,
       "size": "small",
       "passes": false,
-      "model": "sonnet",
       "verify": "inline",
       "startTime": "",
       "endTime": "",
@@ -48,36 +47,6 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in the project r
   "waves": []
 }
 ```
-
----
-
-## Model Assignment: Sonnet vs Opus
-
-Each story should have a `model` field indicating which model should implement it.
-
-**Default to `"sonnet"`** - Most stories should use Sonnet. It's faster, cheaper, and excellent for well-defined tasks with clear acceptance criteria.
-
-**Assign `"opus"` when the story involves:**
-
-| Complexity Indicator | Example |
-|---------------------|---------|
-| Refactoring across 5+ files | "Rename userId to memberId throughout codebase" |
-| Architectural changes | "Convert REST endpoints to GraphQL" |
-| Complex debugging | "Fix race condition in async queue processing" |
-| Subtle logic | "Implement conflict resolution for concurrent edits" |
-| Multiple interacting systems | "Add caching layer with invalidation across services" |
-| Performance optimization | "Optimize N+1 queries in dashboard aggregations" |
-| Security-sensitive code | "Implement RBAC permission system" |
-
-**Keep `"sonnet"` for:**
-- Adding a database column/migration
-- Creating a new UI component
-- Adding a filter/sort to a list
-- Simple CRUD operations
-- Adding validation rules
-- UI styling changes
-
-**Rule of thumb:** If you hesitate about whether Sonnet can handle it, assign Opus. The cost difference is worth avoiding a failed iteration.
 
 ---
 
@@ -91,16 +60,14 @@ Each story has a `verify` field controlling how verification happens. This is a 
 
 | Condition | Why Deep Verification |
 |-----------|----------------------|
-| Story has `"model": "opus"` | Complex stories need thorough verification |
 | Story is the LAST in the PRD | Final verification before completion |
 | Story touches security/auth | Critical code needs independent verification |
+| Story is large/complex (5+ files) | Complex stories need thorough verification |
 | Story has failed before | Previous attempts didn't work - verify harder |
 
 **How it works:**
 - `"verify": "inline"` - Agent verifies own work using Goal-Backward Verification in prompt.md (~0 extra tokens)
 - `"verify": "deep"` - After all stories complete, takt spawns a separate verifier agent to independently confirm goals achieved (~50k-100k tokens)
-
-**Auto-assignment rule:** If you assign `"model": "opus"`, also assign `"verify": "deep"`. They go together.
 
 **Token budget consideration:** In a typical 10-story PRD:
 - 8-9 stories: `"verify": "inline"` (0 extra tokens)
@@ -206,8 +173,6 @@ Each story has a `size` field used for progress tracking and ETA estimation. tak
 - Default to `"small"` for most stories (they should be small per the sizing rules below)
 - Use `"medium"` when multiple files need coordinated changes
 - Use `"large"` sparingly - consider splitting if possible
-- Stories with `"model": "opus"` are typically `"medium"` or `"large"`
-
 **Time tracking fields:**
 - `startTime` and `endTime` are populated by takt during execution
 - Leave them as empty strings (`""`) when creating prd.json
@@ -296,8 +261,7 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 5. **branchName**: Derive from PRD filename, kebab-case, prefixed with `takt/` (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 7. **Type assignment**: Assign `"logic"` (TDD), `"ui"` (build-only), or `"hybrid"` based on story content (see Story Type section)
-8. **Model assignment**: Evaluate each story's complexity and assign `"sonnet"` (default) or `"opus"` (see Model Assignment section)
-9. **Verify assignment**: Set `"verify": "deep"` for opus stories and the final story; otherwise `"verify": "inline"`
+8. **Verify assignment**: Set `"verify": "deep"` for the final story, complex stories, and security-sensitive stories; otherwise `"verify": "inline"`
 10. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
 11. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
 12. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
@@ -359,7 +323,6 @@ Add ability to mark tasks with different statuses.
       "priority": 1,
       "size": "small",
       "passes": false,
-      "model": "sonnet",
       "verify": "inline",
       "startTime": "",
       "endTime": "",
@@ -378,7 +341,6 @@ Add ability to mark tasks with different statuses.
       "priority": 2,
       "size": "small",
       "passes": false,
-      "model": "sonnet",
       "verify": "inline",
       "startTime": "",
       "endTime": "",
@@ -398,7 +360,6 @@ Add ability to mark tasks with different statuses.
       "priority": 3,
       "size": "medium",
       "passes": false,
-      "model": "sonnet",
       "verify": "inline",
       "startTime": "",
       "endTime": "",
@@ -434,10 +395,8 @@ Add ability to mark tasks with different statuses.
 
 Note:
 - **Type assignments:** US-001 is `"logic"` (database), US-002/US-004 are `"ui"` (visual), US-003 is `"hybrid"` (UI + save logic)
-- All stories use `"sonnet"` because they're straightforward CRUD and UI work
-- US-004 has `"verify": "deep"` because it's the **final story** - gets independent verification before completion
+- US-004 has `"verify": "deep"` because it's the **final story** — gets independent verification before completion
 - Size assignments: US-001, US-002 are `"small"` (single concern), US-003, US-004 are `"medium"` (multiple files/logic)
-- If there was a story like "Refactor existing task components" touching 10+ files, it would get `"model": "opus"`, `"verify": "deep"`, and `"size": "large"`
 
 ---
 
@@ -466,8 +425,7 @@ Before writing prd.json, verify:
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story
 - [ ] **Type assigned** to each story (`"logic"` for TDD, `"ui"` for build-only, `"hybrid"` for mixed)
-- [ ] **Model assigned** to each story (`"sonnet"` default, `"opus"` for complex work)
-- [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for opus stories and final story)
+- [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for final story and complex/security stories)
 - [ ] **Size assigned** to each story (`"small"`, `"medium"`, or `"large"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
@@ -484,9 +442,9 @@ Once you have saved `prd.json`, present a summary and offer to start the loop:
 
 Branch: takt/feature-name
 Stories: X total (Y small, Z medium, W large)
-  - US-001: [title] (small, sonnet, inline)
-  - US-002: [title] (small, sonnet, inline)
-  - US-003: [title] (medium, sonnet, deep) ← final verification
+  - US-001: [title] (small, inline)
+  - US-002: [title] (small, inline)
+  - US-003: [title] (medium, deep) ← final verification
 
 Would you like me to start the takt?
 This will:
