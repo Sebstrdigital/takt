@@ -26,7 +26,7 @@ Plan  ──>  Scope  ──>  Execute  ──>  Review
 ```
 
 1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd`.
-2. **Scope** — Say "Convert to prd.json" and Claude converts the PRD into executable stories with priorities, sizes, model assignments, dependencies, and wave groupings using `/takt`.
+2. **Scope** — Say "Convert to prd.json" and Claude converts the PRD into executable stories with priorities, sizes, dependencies, and wave groupings using `/takt`.
 3. **Execute** — Say "takt solo" or "takt team" in Claude Code. Claude reads the orchestrator prompt, loads `prd.json`, and spawns autonomous worker agents for each story.
 4. **Review** — Say "takt retro" and Claude analyzes workbooks from the run, identifies patterns, and tracks recurring issues across executions.
 
@@ -91,7 +91,7 @@ Suggested automatically after each solo or team run completes. The value of retr
 
 | File | Purpose | Created by |
 |------|---------|------------|
-| `prd.json` | Stories, waves, dependencies, model assignments | `/takt` command + human review |
+| `prd.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review |
 | `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent during implementation |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent |
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command |
