@@ -4,7 +4,7 @@
 # Installs everything into ~/.claude/ so the repo can be deleted after install.
 #
 # Installed layout:
-#   ~/.claude/lib/takt/             # Loop script + supporting files
+#   ~/.claude/lib/takt/             # Agent prompts + supporting files
 #   ~/.claude/commands/             # Slash commands (/takt, /takt-prd, /tdd)
 #   ~/.claude/CLAUDE.md             # takt section appended
 #
@@ -121,20 +121,24 @@ if [ -f "$CLAUDE_MD" ] && grep -q "dua-loop - Autonomous Agent Loop" "$CLAUDE_MD
     sed -i '' '/## dua-loop - Autonomous Agent Loop/,/## takt/{ /## takt/!d; }' "$CLAUDE_MD"
     echo -e "  ${YELLOW}cleaned${NC}  CLAUDE.md (removed old dua-loop section)"
 fi
+# Remove old takt.sh (replaced by native Claude Code execution)
+if [ -f "$TAKT_DIR/takt.sh" ]; then
+    rm -f "$TAKT_DIR/takt.sh"
+    echo -e "  ${YELLOW}removed${NC}  lib/takt/takt.sh (replaced by native execution)"
+fi
 echo ""
 
 # --- takt core ---
 echo "takt -> $TAKT_DIR/"
 mkdir -p "$TAKT_DIR"
-cp "$SCRIPT_DIR/bin/takt.sh" "$TAKT_DIR/takt.sh"
-chmod +x "$TAKT_DIR/takt.sh"
+cp "$SCRIPT_DIR/lib/solo.md" "$TAKT_DIR/solo.md"
 cp "$SCRIPT_DIR/lib/prompt.md" "$TAKT_DIR/prompt.md"
 cp "$SCRIPT_DIR/agents/verifier.md" "$TAKT_DIR/verifier.md"
 cp "$SCRIPT_DIR/lib/team-lead.md" "$TAKT_DIR/team-lead.md"
 cp "$SCRIPT_DIR/lib/worker.md" "$TAKT_DIR/worker.md"
 cp "$SCRIPT_DIR/lib/debug.md" "$TAKT_DIR/debug.md"
 cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
-echo -e "  ${GREEN}copied${NC}   takt.sh"
+echo -e "  ${GREEN}copied${NC}   solo.md"
 echo -e "  ${GREEN}copied${NC}   prompt.md"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
 echo -e "  ${GREEN}copied${NC}   team-lead.md"
@@ -159,12 +163,11 @@ if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
 
 ## takt - Autonomous Agent Orchestrator
 
-Available globally. Use when a project has `prd.json`:
-- `takt solo` — run stories sequentially (`~/.claude/lib/takt/takt.sh`)
-- `takt team` — run stories in parallel (multi-agent)
+Available globally. Use when a project has `prd.json`. Say these in Claude Code:
+- `takt solo` — run stories sequentially (reads `~/.claude/lib/takt/solo.md`)
+- `takt team` — run stories in parallel (reads `~/.claude/lib/takt/team-lead.md`)
 - `takt debug` — strict bug-fixing discipline
 - `takt retro` — post-execution retrospective
-- `takt init` — scaffold a new project
 - `/takt-prd` — generate PRD from feature description
 - `/takt` — convert PRD to prd.json
 - `/tdd` — TDD workflow

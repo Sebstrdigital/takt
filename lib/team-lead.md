@@ -14,7 +14,7 @@ You are the scrum master for a takt team execution. You orchestrate parallel sto
 ## Startup
 
 1. Read `prd.json` and validate it has a `waves` field
-2. Read any existing `workbook-*.md` files for context from previous runs
+2. Read any existing `.takt/workbooks/workbook-*.md` files for context from previous runs
 3. Create the team: `TeamCreate` with team name from prd.json project
 4. Create tasks from prd.json stories using TaskCreate
 
@@ -30,8 +30,8 @@ git worktree add .worktrees/<story-id> -b takt/<story-id>
 
 ### 2. Spawn Workers
 For each story, spawn a Task agent:
-- `subagent_type`: Use the model specified in the story (`sonnet` or `opus`)
-- `mode`: `bypassPermissions`
+- `subagent_type`: `"general-purpose"` — **NEVER use custom agent types**. Always use `general-purpose`.
+- `mode`: `"bypassPermissions"`
 - Working directory: `.worktrees/<story-id>/`
 - Prompt: Include the story details + worker instructions from `worker.md`
 
@@ -42,7 +42,7 @@ For each story, spawn a Task agent:
 - If a worker fails: retry up to 2 times, then mark story as blocked
 
 ### 4. Merge Planning (after all workers in wave report `done`)
-1. Read each worker's `workbook-US-XXX.md`
+1. Read each worker's `.takt/workbooks/workbook-US-XXX.md`
 2. Identify file overlaps between stories
 3. Plan merge order (least conflicts first)
 
@@ -52,7 +52,8 @@ For each completed story (one at a time):
 2. If conflict: consult the original worker agent (still idle with context)
 3. Run tests after each merge
 4. If tests fail: fix or revert and retry
-5. On success: clean up worktree
+5. On success: update `prd.json` — set `passes: true` for this story
+6. Clean up worktree:
 ```bash
 git worktree remove .worktrees/<story-id>
 git branch -d takt/<story-id>
@@ -80,8 +81,14 @@ git branch -d takt/<story-id>
 
 When all waves are done:
 1. Run final test suite
-2. Update prd.json — mark all completed stories as `passes: true`
-3. Clean up any remaining worktrees
+2. Verify prd.json — confirm all completed stories have `passes: true` (each story should already be updated after its merge; fix any that were missed)
+3. Clean up remaining worktrees and branches:
+```bash
+# Remove all worktrees
+rm -rf .worktrees/
+# Remove any lingering takt branches
+git branch --list 'takt/*' | xargs -r git branch -D
+```
 4. Output: `<promise>COMPLETE</promise>`
 5. Suggest: "Run `takt retro` to generate a retrospective from the workbooks."
 

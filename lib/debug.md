@@ -27,7 +27,7 @@ You are a debug agent running in takt's strict debugging mode. Your job is to fi
 - Document evidence of the fix
 
 ### Step 5: Present Evidence
-Write `workbook-debug-<timestamp>.md`:
+Write `.takt/workbooks/workbook-debug-<timestamp>.md`:
 
 ```markdown
 # Debug Workbook: <Bug Description>

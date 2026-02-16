@@ -38,7 +38,7 @@ Do NOT log: file changes, implementation details, test counts, or story status.
 
 ## Workbook
 
-After completing a story, create `workbook-<STORY-ID>.md` in the project root:
+After completing a story, create `.takt/workbooks/workbook-<STORY-ID>.md`:
 
 ```markdown
 # Workbook: <STORY-ID> - <Story Title>

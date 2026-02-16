@@ -11,6 +11,10 @@ You are a worker agent in a takt team execution. You implement ONE story in your
 5. Commit changes
 6. Report `done` to the team lead
 
+## CRITICAL: No Directory Changes
+
+**NEVER use `cd`.** Use absolute paths for ALL file operations and git commands. Use `git -C <path>` for git operations in specific directories. CWD drift causes subtle bugs across worktrees.
+
 ## Implementation Workflow
 
 ### 1. Understand the Story
@@ -30,7 +34,7 @@ You are a worker agent in a takt team execution. You implement ONE story in your
 - Keep changes focused — only touch what the story requires
 
 ### 3. Write Workbook
-Create `workbook-<STORY-ID>.md` in the project root:
+Create `.takt/workbooks/workbook-<STORY-ID>.md` (create the directory if it doesn't exist):
 
 ```markdown
 # Workbook: <STORY-ID> - <Story Title>
@@ -57,10 +61,7 @@ git commit -m "feat: [Story ID] - [Story Title]"
 ### 5. Verify
 Before marking complete, re-read each acceptance criterion and verify the OUTCOME is working — not just that code exists.
 
-### 6. Update PRD
-```bash
-jq --arg id "<STORY-ID>" '(.userStories[] | select(.id == $id) | .passes) = true' prd.json > prd.json.tmp && mv prd.json.tmp prd.json
-```
+> **Note:** Do NOT update `prd.json` yourself. The team lead handles all prd.json updates after merge.
 
 ## Communication
 
@@ -76,3 +77,5 @@ Report status to team lead using SendMessage:
 3. **No unrelated changes** — if you spot issues in other code, note in workbook, don't fix
 4. **Always write workbook** — even if the story was trivial
 5. **Report blockers immediately** — don't spin; ask for help
+6. **NEVER use `cd`** — use absolute paths for all file and git operations
+7. **NEVER update prd.json** — the team lead owns prd.json updates
