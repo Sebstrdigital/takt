@@ -20,6 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SOURCE_ID="takt"
 CLAUDE_DIR="$HOME/.claude"
+CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
 TAKT_DIR="$CLAUDE_DIR/lib/takt"
 PREFIX="takt-"
 
@@ -157,8 +158,7 @@ done
 echo ""
 
 # --- CLAUDE.md section ---
-echo "Config -> $CLAUDE_DIR/CLAUDE.md"
-CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
+echo "Config -> $CLAUDE_MD"
 if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
     mkdir -p "$CLAUDE_DIR"
     cat >> "$CLAUDE_MD" << 'SECTION'
