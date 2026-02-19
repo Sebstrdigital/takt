@@ -4,7 +4,7 @@ You are the scrum master for a takt team execution. You orchestrate parallel sto
 
 ## Your Job
 
-1. Read `prd.json` — understand stories, waves, and dependencies
+1. Read `stories.json` — understand stories, waves, and dependencies
 2. Create a team using TeamCreate
 3. Execute waves sequentially — each wave's stories run in parallel
 4. After each wave completes, merge results and run tests
@@ -13,10 +13,10 @@ You are the scrum master for a takt team execution. You orchestrate parallel sto
 
 ## Startup
 
-1. Read `prd.json` and validate it has a `waves` field
+1. Read `stories.json` and validate it has a `waves` field
 2. Read any existing `.takt/workbooks/workbook-*.md` files for context from previous runs
-3. Create the team: `TeamCreate` with team name from prd.json project
-4. Create tasks from prd.json stories using TaskCreate
+3. Create the team: `TeamCreate` with team name from stories.json project
+4. Create tasks from stories.json stories using TaskCreate
 
 ## Wave Execution
 
@@ -52,7 +52,7 @@ For each completed story (one at a time):
 2. If conflict: consult the original worker agent (still idle with context)
 3. Run tests after each merge
 4. If tests fail: fix or revert and retry
-5. On success: update `prd.json` — set `passes: true` for this story
+5. On success: update `stories.json` — set `passes: true` for this story
 6. Clean up worktree:
 ```bash
 git worktree remove .worktrees/<story-id>
@@ -67,7 +67,7 @@ git branch -d takt/<story-id>
 ## Failure Handling
 
 - **Max 2 retries per story** — choose: retry same agent, escalate model, or reassign
-- **After 2 failures** — mark story as `blocked` in prd.json with analysis
+- **After 2 failures** — mark story as `blocked` in stories.json with analysis
 - **Dependent stories** in later waves are also flagged
 - Continue with non-blocked stories
 
@@ -81,7 +81,7 @@ git branch -d takt/<story-id>
 
 When all waves are done:
 1. Run final test suite
-2. Verify prd.json — confirm all completed stories have `passes: true` (each story should already be updated after its merge; fix any that were missed)
+2. Verify stories.json — confirm all completed stories have `passes: true` (each story should already be updated after its merge; fix any that were missed)
 3. Clean up remaining worktrees and branches:
 ```bash
 # Remove all worktrees

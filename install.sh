@@ -165,13 +165,13 @@ if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
 
 ## takt - Autonomous Agent Orchestrator
 
-Available globally. Use when a project has `prd.json`. Say these in Claude Code:
+Available globally. Use when a project has `stories.json`. Say these in Claude Code:
 - `takt solo` — run stories sequentially (reads `~/.claude/lib/takt/solo.md`)
 - `takt team` — run stories in parallel (reads `~/.claude/lib/takt/team-lead.md`)
 - `takt debug` — strict bug-fixing discipline
 - `takt retro` — post-execution retrospective
 - `/takt-prd` — generate PRD from feature description
-- `/takt` — convert PRD to prd.json
+- `/takt` — convert PRD to stories.json
 - `/tdd` — TDD workflow
 SECTION
     echo -e "  ${GREEN}added${NC}    takt section"

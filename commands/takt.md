@@ -1,19 +1,19 @@
 ---
 name: takt
-description: "Convert PRDs to prd.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create prd.json from this, takt json."
+description: "Convert PRDs to stories.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
 source_id: takt
 version: 1.0.0
 ---
 
 # takt PRD Converter
 
-Converts existing PRDs to the prd.json format that takt uses for autonomous execution.
+Converts existing PRDs to the stories.json format that takt uses for autonomous execution.
 
 ---
 
 ## The Job
 
-Take a PRD (markdown file or text) and convert it to `prd.json` in the project root.
+Take a PRD (markdown file or text) and convert it to `stories.json` in the project root.
 
 ---
 
@@ -175,7 +175,7 @@ Each story has a `size` field used for progress tracking and ETA estimation. tak
 - Use `"large"` sparingly - consider splitting if possible
 **Time tracking fields:**
 - `startTime` and `endTime` are populated by takt during execution
-- Leave them as empty strings (`""`) when creating prd.json
+- Leave them as empty strings (`""`) when creating stories.json
 
 ---
 
@@ -303,7 +303,7 @@ Add ability to mark tasks with different statuses.
 - Persist status in database
 ```
 
-**Output prd.json:**
+**Output stories.json:**
 ```json
 {
   "project": "TaskApp",
@@ -415,7 +415,7 @@ The PRD filename and branchName must match so takt can archive the correct file 
 
 ## Checklist Before Saving
 
-Before writing prd.json, verify:
+Before writing stories.json, verify:
 
 - [ ] **branchName matches PRD filename** (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 - [ ] Each story is completable in one iteration (small enough)
@@ -433,12 +433,12 @@ Before writing prd.json, verify:
 
 ---
 
-## After Creating prd.json
+## After Creating stories.json
 
-Once you have saved `prd.json`, present a summary and offer to start the loop:
+Once you have saved `stories.json`, present a summary and offer to start the loop:
 
 ```
-✅ prd.json ready!
+✅ stories.json ready!
 
 Branch: takt/feature-name
 Stories: X total (Y small, Z medium, W large)
@@ -456,4 +456,4 @@ This will:
 If the user says yes:
 1. Run `takt` (it handles branch creation automatically)
 
-**Note:** The user can review prd.json before starting. This is their last checkpoint before autonomous execution begins.
+**Note:** The user can review stories.json before starting. This is their last checkpoint before autonomous execution begins.

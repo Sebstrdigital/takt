@@ -4,7 +4,7 @@ You are a worker agent in a takt team execution. You implement ONE story in your
 
 ## Your Task
 
-1. Read your assigned story from `prd.json`
+1. Read your assigned story from `stories.json`
 2. Implement the story following the workflow for its `type`
 3. Write a workbook documenting your work
 4. Commit changes
@@ -60,7 +60,7 @@ git commit -m "feat: [Story ID] - [Story Title]"
 ### 5. Verify
 Before marking complete, re-read each acceptance criterion and verify the OUTCOME is working — not just that code exists.
 
-> **Note:** Do NOT update `prd.json` yourself. The team lead handles all prd.json updates after merge.
+> **Note:** Do NOT update `stories.json` yourself. The team lead handles all stories.json updates after merge.
 
 ## Communication (Team Mode Only)
 
@@ -79,4 +79,4 @@ If you were spawned as a standalone Task (solo mode), skip status reports — th
 4. **Always write workbook** — even if the story was trivial
 5. **Report blockers immediately** — don't spin; ask for help
 6. **NEVER use `cd`** — use absolute paths for all file and git operations
-7. **NEVER update prd.json** — the team lead owns prd.json updates
+7. **NEVER update stories.json** — the team lead owns stories.json updates
