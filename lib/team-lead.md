@@ -89,8 +89,52 @@ rm -rf .worktrees/
 # Remove worker branches (but NOT the feature branch you're on)
 git branch --list 'takt/*' | grep -v "$(git branch --show-current)" | xargs -r git branch -D
 ```
-4. Output: `<promise>COMPLETE</promise>`
-5. Suggest: "Run `takt retro` to generate a retrospective from the workbooks."
+4. Run scenario verification (see below)
+5. Output: `<promise>COMPLETE</promise>`
+6. Suggest: "Run `takt retro` to generate a retrospective from the workbooks."
+
+## Scenario Verification Phase
+
+After all waves complete and cleanup is done, run scenario verification:
+
+**CRITICAL: NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier. The team lead must remain isolated from scenario data.**
+
+1. Read the verifier instructions:
+   ```bash
+   cat ~/.claude/lib/takt/verifier.md
+   ```
+
+2. Get the recent git changes:
+   ```bash
+   git log --oneline -20
+   ```
+
+3. Spawn a SINGLE verifier Task agent for all stories:
+   - **subagent_type**: `"general-purpose"`
+   - **mode**: `"bypassPermissions"`
+   - **run_in_background**: `true`
+   - **prompt**:
+     ```
+     # Scenario Verification
+
+     ## Scenarios File Path
+     .takt/scenarios.json
+
+     ## Verifier Instructions
+     <contents of verifier.md>
+
+     ## Recent Changes
+     <git log output>
+
+     Read .takt/scenarios.json and verify each scenario against the codebase.
+     ```
+
+4. If verifier reports `VERIFICATION: FAILED`:
+   - Review the per-scenario report to understand which stories have failures
+   - Spawn fix workers as needed to address identified issues
+   - Re-run the verifier after fixes
+
+5. If verifier reports `VERIFICATION: PASSED`, proceed to output the completion signal.
 
 ## Rules
 

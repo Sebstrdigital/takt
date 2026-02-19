@@ -150,7 +150,7 @@ After processing a story (success, skip, or block), move to the next incomplete 
 
 If stories were skipped due to blocked dependencies, make a second pass — some may have become unblocked if their dependencies were completed in a different order.
 
-## Deep Verification Phase
+## Scenario Verification Phase
 
 After the story loop completes, check if ALL stories have `passes: true`:
 
@@ -160,34 +160,30 @@ jq '[.userStories[] | select(.passes == false)] | length' stories.json
 
 If any stories still have `passes: false`, report which stories are incomplete and why, then STOP. Do not output the completion signal.
 
-If ALL stories pass, run deep verification for stories marked `verify: "deep"`:
+If ALL stories pass, run scenario verification:
 
-### For each story with `verify: "deep"`:
+**CRITICAL: NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier. The orchestrator must remain isolated from scenario data.**
 
 1. Read the verifier instructions:
    ```bash
    cat ~/.claude/lib/takt/verifier.md
    ```
 
-2. Get the story details and recent git changes:
+2. Get the recent git changes:
    ```bash
-   jq --arg id "<STORY-ID>" '.userStories[] | select(.id == $id)' stories.json
-   git log --oneline -10
+   git log --oneline -20
    ```
 
-3. Spawn a verifier Task agent:
+3. Spawn a SINGLE verifier Task agent for all stories:
    - **subagent_type**: `"general-purpose"`
    - **mode**: `"bypassPermissions"`
    - **run_in_background**: `true`
    - **prompt**:
      ```
-     # Deep Verification: <STORY-ID> - <Story Title>
+     # Scenario Verification
 
-     ## Story Details
-     <story JSON>
-
-     ## Acceptance Criteria to Verify
-     <list each criterion>
+     ## Scenarios File Path
+     .takt/scenarios.json
 
      ## Verifier Instructions
      <contents of verifier.md>
@@ -195,19 +191,15 @@ If ALL stories pass, run deep verification for stories marked `verify: "deep"`:
      ## Recent Changes
      <git log output>
 
-     Verify that this story ACTUALLY achieved its goals. Check outcomes, not just code.
+     Read .takt/scenarios.json and verify each scenario against the codebase.
      ```
 
 4. If verifier reports `VERIFICATION: FAILED`:
-   - Set `passes: false` for that story:
-     ```bash
-     jq --arg id "<STORY-ID>" '(.userStories[] | select(.id == $id) | .passes) = false' \
-       stories.json > stories.json.tmp && mv stories.json.tmp stories.json
-     ```
-   - Spawn a new worker to fix the issues identified by the verifier
-   - Re-run verification after the fix
+   - Review the per-scenario report to understand which stories have failures
+   - Spawn fix workers as needed to address identified issues
+   - Re-run the verifier after fixes
 
-5. If verifier reports `VERIFICATION: PASSED`, continue to next story needing deep verification.
+5. If verifier reports `VERIFICATION: PASSED`, proceed to Completion.
 
 ## Completion
 

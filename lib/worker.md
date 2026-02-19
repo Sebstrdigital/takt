@@ -80,3 +80,4 @@ If you were spawned as a standalone Task (solo mode), skip status reports — th
 5. **Report blockers immediately** — don't spin; ask for help
 6. **NEVER use `cd`** — use absolute paths for all file and git operations
 7. **NEVER update stories.json** — the team lead owns stories.json updates
+8. **NEVER read files in `.takt/`** — they are system-managed and contain verification data that must remain hidden from workers
