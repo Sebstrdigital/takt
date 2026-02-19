@@ -54,7 +54,7 @@ takt retro   # Post-execution review and trend analysis
 
 | File | Purpose | Written by |
 |------|---------|------------|
-| `prd.json` | Stories, waves, dependencies | `/takt-prd`, human review |
+| `stories.json` | Stories, waves, dependencies | `/takt-prd`, human review |
 | `workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers, agent ID | Each agent during implementation |
 | `retro.md` | Run entries + active alerts section at top | `takt retro` agent |
 
@@ -81,7 +81,7 @@ takt retro   # Post-execution review and trend analysis
 
 ## Team Mode — Wave Planning
 
-Waves are **pre-computed in prd.json** by `/takt-prd`. The scrum master executes the plan — it does not create it.
+Waves are **pre-computed in stories.json** by `/takt-prd`. The scrum master executes the plan — it does not create it.
 
 ```json
 {
@@ -161,7 +161,7 @@ Decision guide:
 | # | Question | Decision |
 |---|----------|----------|
 | Q1 | Where should team mode live? | One `takt` CLI with subcommands dispatching to separate implementations |
-| Q2 | Wave planning? | Rules-based, pre-computed in prd.json. Scrum master executes, doesn't plan. |
+| Q2 | Wave planning? | Rules-based, pre-computed in stories.json. Scrum master executes, doesn't plan. |
 | Q3 | Git worktree location? | `.worktrees/` inside project, auto-cleaned after merge |
 | Q4 | Communication protocol? | Structured flags required + free-form encouraged |
 | Q5 | Failure handling? | Scrum master decides within retry cap (max 2), then blocked + human review |
@@ -172,5 +172,5 @@ Decision guide:
 
 1. ~~Answer the 5 open questions~~ Done
 2. Generate PRD with `/takt-prd` (covering all three modes or team mode first)
-3. Convert to prd.json with `/takt`
+3. Convert to stories.json with `/takt`
 4. Implement (dogfooding: use takt solo to build takt team?)

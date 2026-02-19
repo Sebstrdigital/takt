@@ -20,21 +20,21 @@ takt runs natively inside Claude Code. There is no CLI binary or bash script —
 
 ```
 Plan  ──>  Scope  ──>  Execute  ──>  Review
- PRD       prd.json    takt solo     takt retro
+ PRD       stories.json    takt solo     takt retro
                         takt team
                         takt debug
 ```
 
 1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd`.
-2. **Scope** — Say "Convert to prd.json" and Claude converts the PRD into executable stories with priorities, sizes, dependencies, and wave groupings using `/takt`.
-3. **Execute** — Say "takt solo" or "takt team" in Claude Code. Claude reads the orchestrator prompt, loads `prd.json`, and spawns autonomous worker agents for each story.
+2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into executable stories with priorities, sizes, dependencies, and wave groupings using `/takt`.
+3. **Execute** — Say "takt solo" or "takt team" in Claude Code. Claude reads the orchestrator prompt, loads `stories.json`, and spawns autonomous worker agents for each story.
 4. **Review** — Say "takt retro" and Claude analyzes workbooks from the run, identifies patterns, and tracks recurring issues across executions.
 
 ## Modes
 
 ### takt solo — Sprint Execution
 
-Single orchestrator, one story at a time. The orchestrator reads `prd.json`, picks the next incomplete story, spawns a fresh worker agent to implement it with TDD, verifies acceptance criteria, updates `prd.json`, and moves to the next story.
+Single orchestrator, one story at a time. The orchestrator reads `stories.json`, picks the next incomplete story, spawns a fresh worker agent to implement it with TDD, verifies acceptance criteria, updates `stories.json`, and moves to the next story.
 
 Say in Claude Code:
 ```
@@ -54,7 +54,7 @@ takt team
 
 **How it works:**
 
-1. **Wave planning** — The scrum master reads `prd.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
+1. **Wave planning** — The scrum master reads `stories.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
 2. **Worktree isolation** — Each worker gets its own git worktree (`.worktrees/<story-id>/`), so agents work in parallel without stepping on each other's files.
 3. **Parallel implementation** — Workers implement their stories with TDD, each writing a workbook with decisions, files changed, and blockers.
 4. **Merge planning** — When a wave's workers finish, the scrum master reads their workbooks to identify file overlaps and plans the merge order to minimize conflicts.
@@ -91,7 +91,7 @@ Suggested automatically after each solo or team run completes. The value of retr
 
 | File | Purpose | Created by |
 |------|---------|------------|
-| `prd.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review |
+| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review |
 | `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent during implementation |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent |
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command |
@@ -124,7 +124,7 @@ cd takt && git pull && ./install.sh
 │   ├── debug.md              # Debug mode agent prompt
 │   └── retro.md              # Retro mode agent prompt
 ├── commands/
-│   ├── takt.md               # /takt — convert PRD to prd.json
+│   ├── takt.md               # /takt — convert PRD to stories.json
 │   ├── takt-prd.md           # /takt-prd — generate PRD
 │   └── tdd.md                # /tdd — TDD workflow
 └── CLAUDE.md                 # takt section appended

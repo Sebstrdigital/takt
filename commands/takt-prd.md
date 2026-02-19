@@ -261,12 +261,12 @@ Once you have saved the PRD file(s), present a summary and offer to continue:
 - tasks/prd-feature-name.md (X user stories)
 - tasks/prd-another-feature.md (Y user stories)  [if multiple]
 
-Would you like me to convert the first one to prd.json for takt execution?
+Would you like me to convert the first one to stories.json for takt execution?
 ```
 
 If the user says yes:
 1. Use the `/takt` command
-2. Convert the specified PRD to `prd.json`
+2. Convert the specified PRD to `stories.json`
 
 This creates a smooth handoff from planning to execution.
 

@@ -1,10 +1,10 @@
 # takt Solo Orchestrator
 
-You are the solo orchestrator for a takt execution. You run ALL stories in `prd.json` sequentially, spawning a fresh worker agent for each story. **You never write code yourself — you only coordinate.**
+You are the solo orchestrator for a takt execution. You run ALL stories in `stories.json` sequentially, spawning a fresh worker agent for each story. **You never write code yourself — you only coordinate.**
 
 ## Startup
 
-1. Read `prd.json` in the project root
+1. Read `stories.json` in the project root
 2. Validate it exists and has a `userStories` array
 3. Read any existing `workbook-*.md` files in `.takt/workbooks/` for context from previous runs
 4. Create or switch to the feature branch specified in `branchName`:
@@ -23,7 +23,7 @@ You are the solo orchestrator for a takt execution. You run ALL stories in `prd.
 
 Get incomplete stories sorted by priority:
 ```bash
-jq -r '[.userStories[] | select(.passes == false)] | sort_by(.priority) | .[] | .id' prd.json
+jq -r '[.userStories[] | select(.passes == false)] | sort_by(.priority) | .[] | .id' stories.json
 ```
 
 For each incomplete story (in priority order):
@@ -34,7 +34,7 @@ Before starting a story, verify all its `dependsOn` stories have `passes: true`:
 ```bash
 jq -r --arg id "<STORY-ID>" '
   .userStories[] | select(.id == $id) | .dependsOn[]
-' prd.json
+' stories.json
 ```
 
 For each dependency ID, check it passes. If any dependency has `passes: false`, **skip this story** and continue to the next. Log: "Skipping <STORY-ID>: dependency <DEP-ID> not yet complete."
@@ -44,7 +44,7 @@ For each dependency ID, check it passes. If any dependency has `passes: false`, 
 ```bash
 jq --arg id "<STORY-ID>" --arg time "$(date +"%Y-%m-%d %H:%M")" \
   '(.userStories[] | select(.id == $id) | .startTime) = $time' \
-  prd.json > prd.json.tmp && mv prd.json.tmp prd.json
+  stories.json > stories.json.tmp && mv stories.json.tmp stories.json
 ```
 
 ### 3. Build Worker Prompt
@@ -54,9 +54,9 @@ Read the worker instructions from the installed location:
 cat ~/.claude/lib/takt/worker.md
 ```
 
-Read the full story object from prd.json:
+Read the full story object from stories.json:
 ```bash
-jq --arg id "<STORY-ID>" '.userStories[] | select(.id == $id)' prd.json
+jq --arg id "<STORY-ID>" '.userStories[] | select(.id == $id)' stories.json
 ```
 
 Compose the task prompt by combining:
@@ -78,7 +78,7 @@ Compose the task prompt by combining:
 
 ## Important Rules for This Execution
 
-1. **Do NOT modify prd.json** — the orchestrator handles this
+1. **Do NOT modify stories.json** — the orchestrator handles this
 2. **Use absolute paths everywhere** — never use `cd` to change directories
 3. **Write your workbook to**: .takt/workbooks/workbook-<STORY-ID>.md
 4. **Commit format**: feat: <STORY-ID> - <Story Title>
@@ -112,19 +112,19 @@ After the worker finishes, verify the story was implemented:
    ```
 3. If both checks pass, the story is considered complete.
 
-### 6. Update prd.json
+### 6. Update stories.json
 
 If verification passes, mark the story as complete:
 ```bash
 jq --arg id "<STORY-ID>" '(.userStories[] | select(.id == $id) | .passes) = true' \
-  prd.json > prd.json.tmp && mv prd.json.tmp prd.json
+  stories.json > stories.json.tmp && mv stories.json.tmp stories.json
 ```
 
 Record end time:
 ```bash
 jq --arg id "<STORY-ID>" --arg time "$(date +"%Y-%m-%d %H:%M")" \
   '(.userStories[] | select(.id == $id) | .endTime) = $time' \
-  prd.json > prd.json.tmp && mv prd.json.tmp prd.json
+  stories.json > stories.json.tmp && mv stories.json.tmp stories.json
 ```
 
 ### 7. Handle Failure
@@ -150,44 +150,40 @@ After processing a story (success, skip, or block), move to the next incomplete 
 
 If stories were skipped due to blocked dependencies, make a second pass — some may have become unblocked if their dependencies were completed in a different order.
 
-## Deep Verification Phase
+## Scenario Verification Phase
 
 After the story loop completes, check if ALL stories have `passes: true`:
 
 ```bash
-jq '[.userStories[] | select(.passes == false)] | length' prd.json
+jq '[.userStories[] | select(.passes == false)] | length' stories.json
 ```
 
 If any stories still have `passes: false`, report which stories are incomplete and why, then STOP. Do not output the completion signal.
 
-If ALL stories pass, run deep verification for stories marked `verify: "deep"`:
+If ALL stories pass, run scenario verification:
 
-### For each story with `verify: "deep"`:
+**CRITICAL: NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier. The orchestrator must remain isolated from scenario data.**
 
 1. Read the verifier instructions:
    ```bash
    cat ~/.claude/lib/takt/verifier.md
    ```
 
-2. Get the story details and recent git changes:
+2. Get the recent git changes:
    ```bash
-   jq --arg id "<STORY-ID>" '.userStories[] | select(.id == $id)' prd.json
-   git log --oneline -10
+   git log --oneline -20
    ```
 
-3. Spawn a verifier Task agent:
+3. Spawn a SINGLE verifier Task agent for all stories:
    - **subagent_type**: `"general-purpose"`
    - **mode**: `"bypassPermissions"`
    - **run_in_background**: `true`
    - **prompt**:
      ```
-     # Deep Verification: <STORY-ID> - <Story Title>
+     # Scenario Verification
 
-     ## Story Details
-     <story JSON>
-
-     ## Acceptance Criteria to Verify
-     <list each criterion>
+     ## Scenarios File Path
+     .takt/scenarios.json
 
      ## Verifier Instructions
      <contents of verifier.md>
@@ -195,19 +191,74 @@ If ALL stories pass, run deep verification for stories marked `verify: "deep"`:
      ## Recent Changes
      <git log output>
 
-     Verify that this story ACTUALLY achieved its goals. Check outcomes, not just code.
+     Read .takt/scenarios.json and verify each scenario against the codebase.
      ```
 
-4. If verifier reports `VERIFICATION: FAILED`:
-   - Set `passes: false` for that story:
-     ```bash
-     jq --arg id "<STORY-ID>" '(.userStories[] | select(.id == $id) | .passes) = false' \
-       prd.json > prd.json.tmp && mv prd.json.tmp prd.json
-     ```
-   - Spawn a new worker to fix the issues identified by the verifier
-   - Re-run verification after the fix
+4. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
 
-5. If verifier reports `VERIFICATION: PASSED`, continue to next story needing deep verification.
+   Track a cycle counter starting at 1 (the initial verification above counts as cycle 1).
+
+   **While cycle ≤ 3 and verification is FAILED:**
+
+   a. Read `bugs.json` from the project root:
+      ```bash
+      cat bugs.json
+      ```
+      The orchestrator MAY read bugs.json — it contains only behavioral descriptions, no scenario data.
+
+   b. For each bug in bugs.json, spawn a fresh fix worker (Ralph Wiggum pattern — no scenario context):
+      - **subagent_type**: `"general-purpose"`
+      - **mode**: `"bypassPermissions"`
+      - **run_in_background**: `true`
+      - **prompt**:
+        ```
+        # Bug Fix Assignment: <BUG-ID>
+
+        ## Project Working Directory
+        <absolute path to project root>
+
+        ## Bug Description
+        <bug.description>
+
+        ## Expected Behavior
+        <bug.expected>
+
+        ## Actual Behavior
+        <bug.actual>
+
+        ## Instructions
+        Investigate the codebase and fix the described bug. Do not ask for clarification.
+        Commit your fix with message: fix: <BUG-ID> - <short description>
+        Use absolute paths everywhere. Do NOT modify stories.json.
+        ```
+
+      Wait for all fix workers to complete before proceeding.
+
+   c. Increment the cycle counter.
+
+   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 3 above).
+
+   e. If `VERIFICATION: PASSED` → exit the loop and proceed to Completion.
+      If `VERIFICATION: FAILED` and cycle ≤ 3 → repeat from step (a).
+      If `VERIFICATION: FAILED` and cycle > 3 → exit the loop with failure (see step 5).
+
+5. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
+
+   ```
+   ## Verification Failure Report
+
+   Scenario verification failed after 3 fix cycles. The following behaviors remain broken:
+
+   <for each bug in the final bugs.json, list: bug.id — bug.description>
+
+   No further automatic fixing will be attempted. Manual intervention required.
+   ```
+
+   Do NOT include scenario IDs, Given/When/Then text, or any content from scenarios.json in this report. Only use the behavioral descriptions from bugs.json.
+
+   Do NOT output `<promise>COMPLETE</promise>`.
+
+6. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
 
 ## Completion
 
@@ -220,10 +271,10 @@ After all stories pass (including deep verification):
    [ -f "Makefile" ] && make test 2>/dev/null || true
    ```
 
-2. Commit the final prd.json state:
+2. Commit the final stories.json state:
    ```bash
-   git add prd.json
-   git commit -m "chore: mark all stories complete in prd.json" --allow-empty
+   git add stories.json
+   git commit -m "chore: mark all stories complete in stories.json" --allow-empty
    ```
 
 3. Output the completion signal:
@@ -242,7 +293,7 @@ After all stories pass (including deep verification):
 
 1. **Never write code** — you orchestrate, you do not implement
 2. **Fresh agent per story** — each story gets a new Task agent with no prior context (Ralph Wiggum pattern)
-3. **Only you update prd.json** — workers must NOT touch prd.json
+3. **Only you update stories.json** — workers must NOT touch stories.json
 4. **Respect priority order** — process stories lowest priority number first
 5. **Respect dependencies** — never start a story whose dependencies have not passed
 6. **Max 1 retry** — if a story fails twice, mark it blocked and move on

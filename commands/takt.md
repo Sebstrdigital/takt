@@ -1,19 +1,19 @@
 ---
 name: takt
-description: "Convert PRDs to prd.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create prd.json from this, takt json."
+description: "Convert PRDs to stories.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
 source_id: takt
 version: 1.0.0
 ---
 
 # takt PRD Converter
 
-Converts existing PRDs to the prd.json format that takt uses for autonomous execution.
+Converts existing PRDs to the stories.json format that takt uses for autonomous execution.
 
 ---
 
 ## The Job
 
-Take a PRD (markdown file or text) and convert it to `prd.json` in the project root.
+Take a PRD (markdown file or text) and convert it to `stories.json` in the project root.
 
 ---
 
@@ -175,7 +175,7 @@ Each story has a `size` field used for progress tracking and ETA estimation. tak
 - Use `"large"` sparingly - consider splitting if possible
 **Time tracking fields:**
 - `startTime` and `endTime` are populated by takt during execution
-- Leave them as empty strings (`""`) when creating prd.json
+- Leave them as empty strings (`""`) when creating stories.json
 
 ---
 
@@ -266,6 +266,7 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 11. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
 12. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
 13. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
+14. **Scenario generation**: After writing stories.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
 
 ---
 
@@ -303,7 +304,7 @@ Add ability to mark tasks with different statuses.
 - Persist status in database
 ```
 
-**Output prd.json:**
+**Output stories.json:**
 ```json
 {
   "project": "TaskApp",
@@ -413,9 +414,86 @@ The PRD filename and branchName must match so takt can archive the correct file 
 
 ---
 
+## Scenario Generation
+
+When converting a PRD, ALSO generate `.takt/scenarios.json` alongside `stories.json`. Scenarios are used exclusively by the verifier — implementation workers never see this file.
+
+### Why Scenarios Exist
+
+Acceptance criteria tell workers what to build. Scenarios tell the verifier what to CHECK. They are independent on purpose: if scenarios were derived from the same acceptance criteria the worker reads, the verifier would just confirm the worker followed instructions — not that the feature actually works.
+
+Scenarios must describe **observable behavioral outcomes** — what a QA engineer would manually test — not implementation details or copy-pasted acceptance criteria.
+
+### Scenarios File Format
+
+Store at `.takt/scenarios.json`. Create the `.takt/` directory if it does not exist.
+
+```json
+{
+  "stories": {
+    "US-001": [
+      {
+        "id": "SC-001",
+        "given": "a database with no status column on the tasks table",
+        "when": "the migration is run",
+        "then": "the tasks table has a status column with default value 'pending' and the app starts without errors",
+        "type": "behavioral"
+      },
+      {
+        "id": "SC-002",
+        "given": "an existing task row in the database",
+        "when": "the status column is queried",
+        "then": "the value is 'pending' without any explicit insert",
+        "type": "behavioral"
+      }
+    ],
+    "US-002": [
+      {
+        "id": "SC-003",
+        "given": "a task with status 'in_progress'",
+        "when": "the task list page is loaded",
+        "then": "a blue badge is visible on that task card",
+        "type": "behavioral"
+      }
+    ]
+  }
+}
+```
+
+### Scenario Rules
+
+1. **2-5 scenarios per story** — enough to cover the spirit of the feature, not exhaustive.
+2. **BDD Given/When/Then format** — each field is a complete clause, written in plain English.
+3. **Observable outcomes only** — describe what a human tester would see, click, or measure. Never reference internal function names, variable names, or implementation choices.
+4. **Not copy-pasted acceptance criteria** — acceptance criteria tell the worker what to build; scenarios test whether it actually works from a QA perspective. Reframe, don't copy.
+5. **type field** — use `"behavioral"` for user-facing outcomes, `"contract"` for API/data contract checks, `"edge"` for boundary/error conditions.
+6. **IDs are globally unique** — SC-001, SC-002, etc. across the entire file (not per story).
+7. **Hidden from workers** — `.takt/` is gitignored and not referenced by solo.md or worker.md. Only `verifier.md` reads this file.
+
+### Scenario Writing Guide
+
+Ask yourself: "If I handed this app to a QA engineer with no code access, what would they test?"
+
+Good scenario (behavioral, observable):
+- Given: "a user is on the task list page"
+- When: "they click the status dropdown on a task and select 'Done'"
+- Then: "the task badge turns green and the change persists after page refresh"
+
+Bad scenario (implementation detail):
+- Given: "the updateTaskStatus server action is called"
+- When: "it receives status='done'"
+- Then: "it calls db.update() with the correct parameters"
+
+Bad scenario (copy-pasted criterion):
+- Given: "the filter dropdown exists"
+- When: "it renders"
+- Then: "it has options: All, Active, Completed" ← this is just restating the acceptance criterion
+
+---
+
 ## Checklist Before Saving
 
-Before writing prd.json, verify:
+Before writing stories.json, verify:
 
 - [ ] **branchName matches PRD filename** (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 - [ ] Each story is completable in one iteration (small enough)
@@ -430,15 +508,17 @@ Before writing prd.json, verify:
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
 - [ ] **waves** computed if 6+ stories with independent chains
+- [ ] **scenarios.json** generated at `.takt/scenarios.json` with 2-5 BDD scenarios per story
 
 ---
 
-## After Creating prd.json
+## After Creating stories.json
 
-Once you have saved `prd.json`, present a summary and offer to start the loop:
+Once you have saved `stories.json` and `.takt/scenarios.json`, present a summary and offer to start the loop:
 
 ```
-✅ prd.json ready!
+✅ stories.json ready!
+✅ .takt/scenarios.json generated (hidden from workers, used by verifier)
 
 Branch: takt/feature-name
 Stories: X total (Y small, Z medium, W large)
@@ -456,4 +536,4 @@ This will:
 If the user says yes:
 1. Run `takt` (it handles branch creation automatically)
 
-**Note:** The user can review prd.json before starting. This is their last checkpoint before autonomous execution begins.
+**Note:** The user can review stories.json before starting. This is their last checkpoint before autonomous execution begins.
