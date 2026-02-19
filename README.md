@@ -1,6 +1,6 @@
 # takt
 
-Enterprise-grade development workflows for AI agents. Four modes that mirror real agile delivery: sprint execution, parallel teams, structured debugging, and retrospectives.
+Enterprise-grade development workflows for AI agents. Four modes that mirror real agile delivery: sprint execution, parallel teams, structured debugging, and retrospectives — with hidden scenario-based verification that prevents agents from gaming their own tests.
 
 Named after the Swedish/German word for "beat, pace, rhythm" — the same concept used in lean manufacturing and agile planning to set a sustainable delivery cadence. takt brings that discipline to autonomous AI development.
 
@@ -11,7 +11,8 @@ Most AI coding tools treat development as a single prompt-response cycle. Real s
 - **Stories, not prompts.** Work is scoped into user stories with acceptance criteria — the same artifact that drives human sprint planning.
 - **Wave-based parallelism.** Dependencies are analyzed upfront, stories grouped into waves, and parallel agents execute within each wave — just like a real team coordinating across workstreams.
 - **Fresh context per story.** Each story gets a clean agent instance, avoiding the context pollution that derails long sessions. Memory persists through git history, workbooks, and the PRD itself.
-- **Built-in verification.** Stories can be self-verified or independently deep-verified by a separate agent — mirroring code review in human teams.
+- **Hidden scenario verification.** An independent QA agent checks implementations against hidden BDD scenarios that workers never see — like a QA team that never shows developers what they're testing. Workers can't game the tests because they don't know the tests exist.
+- **Verify-fix loops.** When verification fails, the system generates behavioral bug tickets (not scenario details) and spawns fresh workers to fix them. Up to 3 cycles, maintaining strict information isolation throughout.
 - **Retrospectives that compound.** After each run, patterns are extracted from workbooks and tracked across executions. Recurring issues surface as alerts, not surprises.
 
 ## How It Works
@@ -19,22 +20,53 @@ Most AI coding tools treat development as a single prompt-response cycle. Real s
 takt runs natively inside Claude Code. There is no CLI binary or bash script — you interact with it by typing phrases in Claude Code.
 
 ```
-Plan  ──>  Scope  ──>  Execute  ──>  Review
- PRD       stories.json    takt solo     takt retro
-                        takt team
-                        takt debug
+Plan  ──>  Scope  ──>  Execute  ──>  Verify  ──>  Review
+ PRD       stories.json    workers      scenarios     takt retro
+           scenarios.json  implement    verify
+                                        bug tickets
+                                        fix loop
 ```
 
 1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd`.
-2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into executable stories with priorities, sizes, dependencies, and wave groupings using `/takt`.
-3. **Execute** — Say "takt solo" or "takt team" in Claude Code. Claude reads the orchestrator prompt, loads `stories.json`, and spawns autonomous worker agents for each story.
-4. **Review** — Say "takt retro" and Claude analyzes workbooks from the run, identifies patterns, and tracks recurring issues across executions.
+2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into two files: `stories.json` (visible to workers) and `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier).
+3. **Execute** — Say "takt solo" or "takt team". Workers implement stories against acceptance criteria. They never see the hidden scenarios.
+4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
+5. **Review** — Say "takt retro" and Claude analyzes workbooks from the run, identifies patterns, and tracks recurring issues across executions.
+
+## Information Isolation
+
+takt enforces strict information boundaries between agents. This is the key architectural property that prevents workers from gaming verification.
+
+```
+/takt command (human reviews both files)
+    ├── stories.json        → orchestrator → workers (implement features)
+    └── .takt/scenarios.json → verifier ONLY (QA verification)
+                                    │
+                              100%? → DONE
+                              <100%?→ bugs.json → fresh workers (fix)
+                                                      │
+                                                 re-verify (max 3 cycles)
+```
+
+| File | Orchestrator | Worker | Verifier | Fix Worker |
+|------|-------------|--------|----------|------------|
+| `stories.json` | reads | reads | never | never |
+| `.takt/scenarios.json` | passes path only | **never** | reads | **never** |
+| `bugs.json` | reads (routing) | never | writes | reads |
+
+**How it's enforced:**
+- Workers have an explicit rule: "NEVER read files in `.takt/`"
+- Orchestrators have an explicit rule: "NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier"
+- Bug tickets describe behaviors ("Form accepts empty email without validation error"), never scenario details ("SC-003 Given/When/Then failed")
+- Each agent gets a fresh context (Ralph Wiggum pattern) — no information leaks between agent instances
+
+This is prompt-level architectural isolation, not cryptographic enforcement. The same principle that makes human QA effective: devs don't see the test plan, so they build to the spec rather than to the tests.
 
 ## Modes
 
 ### takt solo — Sprint Execution
 
-Single orchestrator, one story at a time. The orchestrator reads `stories.json`, picks the next incomplete story, spawns a fresh worker agent to implement it with TDD, verifies acceptance criteria, updates `stories.json`, and moves to the next story.
+Single orchestrator, one story at a time. The orchestrator reads `stories.json`, picks the next incomplete story, spawns a fresh worker agent to implement it, verifies acceptance criteria, updates `stories.json`, and moves to the next story. After all stories pass, runs scenario verification.
 
 Say in Claude Code:
 ```
@@ -56,10 +88,11 @@ takt team
 
 1. **Wave planning** — The scrum master reads `stories.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
 2. **Worktree isolation** — Each worker gets its own git worktree (`.worktrees/<story-id>/`), so agents work in parallel without stepping on each other's files.
-3. **Parallel implementation** — Workers implement their stories with TDD, each writing a workbook with decisions, files changed, and blockers.
+3. **Parallel implementation** — Workers implement their stories, each writing a workbook with decisions, files changed, and blockers.
 4. **Merge planning** — When a wave's workers finish, the scrum master reads their workbooks to identify file overlaps and plans the merge order to minimize conflicts.
 5. **Sequential merge** — Stories are merged into main one by one. Tests run after each merge. If a conflict arises, the scrum master consults the original author (still idle with full context) to resolve it.
 6. **Cleanup** — Worktrees are removed after successful merge. Next wave begins.
+7. **Scenario verification** — After all waves merge, the same verify-fix loop runs as in solo mode.
 
 The scrum master never writes code. It orchestrates, monitors, plans merges, and resolves conflicts.
 
@@ -89,13 +122,15 @@ Suggested automatically after each solo or team run completes. The value of retr
 
 ## Artifacts
 
-| File | Purpose | Created by |
-|------|---------|------------|
-| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review |
-| `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent during implementation |
-| `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent |
-| `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command |
-| `tasks/archive/` | Completed PRDs, auto-archived on finish | Solo/team orchestrator |
+| File | Purpose | Created by | Visible to |
+|------|---------|------------|------------|
+| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review | Orchestrator, workers |
+| `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
+| `.takt/bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Orchestrator, fix workers |
+| `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Orchestrator |
+| `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent | Human |
+| `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command | Human |
+| `tasks/archive/` | Completed PRDs, auto-archived on finish | Solo/team orchestrator | Human |
 
 ## Installation
 
@@ -118,7 +153,7 @@ cd takt && git pull && ./install.sh
 ~/.claude/
 ├── lib/takt/
 │   ├── solo.md               # Solo orchestrator prompt
-│   ├── verifier.md           # Deep verification agent
+│   ├── verifier.md           # Scenario verification + bug ticket agent
 │   ├── team-lead.md          # Team mode scrum master prompt
 │   ├── worker.md             # Team mode worker prompt
 │   ├── debug.md              # Debug mode agent prompt
