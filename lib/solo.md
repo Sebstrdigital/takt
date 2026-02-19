@@ -194,12 +194,71 @@ If ALL stories pass, run scenario verification:
      Read .takt/scenarios.json and verify each scenario against the codebase.
      ```
 
-4. If verifier reports `VERIFICATION: FAILED`:
-   - Review the per-scenario report to understand which stories have failures
-   - Spawn fix workers as needed to address identified issues
-   - Re-run the verifier after fixes
+4. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
 
-5. If verifier reports `VERIFICATION: PASSED`, proceed to Completion.
+   Track a cycle counter starting at 1 (the initial verification above counts as cycle 1).
+
+   **While cycle ≤ 3 and verification is FAILED:**
+
+   a. Read `bugs.json` from the project root:
+      ```bash
+      cat bugs.json
+      ```
+      The orchestrator MAY read bugs.json — it contains only behavioral descriptions, no scenario data.
+
+   b. For each bug in bugs.json, spawn a fresh fix worker (Ralph Wiggum pattern — no scenario context):
+      - **subagent_type**: `"general-purpose"`
+      - **mode**: `"bypassPermissions"`
+      - **run_in_background**: `true`
+      - **prompt**:
+        ```
+        # Bug Fix Assignment: <BUG-ID>
+
+        ## Project Working Directory
+        <absolute path to project root>
+
+        ## Bug Description
+        <bug.description>
+
+        ## Expected Behavior
+        <bug.expected>
+
+        ## Actual Behavior
+        <bug.actual>
+
+        ## Instructions
+        Investigate the codebase and fix the described bug. Do not ask for clarification.
+        Commit your fix with message: fix: <BUG-ID> - <short description>
+        Use absolute paths everywhere. Do NOT modify stories.json.
+        ```
+
+      Wait for all fix workers to complete before proceeding.
+
+   c. Increment the cycle counter.
+
+   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 3 above).
+
+   e. If `VERIFICATION: PASSED` → exit the loop and proceed to Completion.
+      If `VERIFICATION: FAILED` and cycle ≤ 3 → repeat from step (a).
+      If `VERIFICATION: FAILED` and cycle > 3 → exit the loop with failure (see step 5).
+
+5. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
+
+   ```
+   ## Verification Failure Report
+
+   Scenario verification failed after 3 fix cycles. The following behaviors remain broken:
+
+   <for each bug in the final bugs.json, list: bug.id — bug.description>
+
+   No further automatic fixing will be attempted. Manual intervention required.
+   ```
+
+   Do NOT include scenario IDs, Given/When/Then text, or any content from scenarios.json in this report. Only use the behavioral descriptions from bugs.json.
+
+   Do NOT output `<promise>COMPLETE</promise>`.
+
+6. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
 
 ## Completion
 
