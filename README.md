@@ -21,11 +21,11 @@ takt runs natively inside Claude Code. There is no CLI binary or bash script —
 
 ```mermaid
 graph LR
-    A["Plan<br/><small>/takt-prd</small>"] --> B["Scope<br/><small>/takt</small>"]
-    B --> C["Execute<br/><small>takt solo · team</small>"]
-    C --> D["Verify<br/><small>hidden scenarios</small>"]
-    D --> E["Review<br/><small>takt retro</small>"]
-    D -- "FAILED" --> F["Fix Loop<br/><small>bugs.json → workers</small>"]
+    A["Plan"] -- "/takt-prd" --> B["Scope"]
+    B -- "/takt" --> C["Execute"]
+    C -- "solo · team" --> D["Verify"]
+    D --> E["Review"]
+    D -- "FAILED" --> F["Fix Loop"]
     F --> D
 
     style A fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
@@ -42,15 +42,15 @@ When planning a feature, takt intercepts plan mode to offer a structured PRD flo
 
 ```mermaid
 graph LR
-    U["User: plan a feature"] --> G{"takt PRD or<br/>Native plan?"}
-    G --> |"takt PRD"| W["Gate: Why<br/><small>confirm motivation</small>"]
-    G --> |"native"| NP["EnterPlanMode"]
-    W --> WH["Gate: What<br/><small>confirm scope</small>"]
-    WH --> WN["Gate: What Not<br/><small>confirm exclusions</small>"]
+    U["Plan a feature"] --> G{"takt PRD or\nNative plan?"}
+    G -- "takt" --> W["Why"]
+    G -- "native" --> NP["Plan Mode"]
+    W --> WH["What"]
+    WH --> WN["What Not"]
     WN --> P["Write PRD"]
-    P --> R["Gate: Review<br/><small>convert to stories?</small>"]
-    R --> |"yes"| T["/takt → stories.json"]
-    T --> E["takt solo · team"]
+    P --> R{"Review"}
+    R -- "convert" --> T["stories.json"]
+    T --> E["Execute"]
 
     style G fill:#4a3f1a,stroke:#eab308,color:#fde68a
     style W fill:#4a3f1a,stroke:#eab308,color:#fde68a
@@ -106,19 +106,19 @@ Single orchestrator, one story at a time. The session agent reads `stories.json`
 
 ```mermaid
 graph TD
-    U["User: takt solo"] --> S["Session Agent"]
-    S --> |"read stories.json<br/>worker.md, verifier.md"| S
-    S --> |"spawn background Task<br/>bypassPermissions"| O["Orchestrator<br/><small>Sonnet · autonomous</small>"]
-    S --> |"TaskOutput loop"| M["Monitor & Print<br/><small>one-liner updates</small>"]
+    U["takt solo"] --> S["Session"]
+    S -- "read files" --> S
+    S -- "spawn" --> O["Orchestrator"]
+    S -- "poll" --> M["Monitor"]
 
     O --> L{"Story Loop"}
-    L --> |"next story"| W["Worker Task<br/><small>Sonnet · bypassPermissions</small>"]
-    W --> |"commit + workbook"| V{"Verify<br/>completion"}
-    V --> |"pass"| L
-    V --> |"fail · retry once"| W
-    L --> |"all done"| SV["Verifier Task<br/><small>Sonnet · bypassPermissions</small>"]
-    SV --> |"PASSED"| C["COMPLETE"]
-    SV --> |"FAILED"| FL{"Fix Loop<br/><small>max 3 cycles</small>"}
+    L -- "next" --> W["Worker"]
+    W --> V{"Pass?"}
+    V -- "yes" --> L
+    V -- "no, retry" --> W
+    L -- "all done" --> SV["Verifier"]
+    SV -- "PASSED" --> C["COMPLETE"]
+    SV -- "FAILED" --> FL{"Fix Loop"}
     FL --> FW["Fix Workers"]
     FW --> SV
 
@@ -147,27 +147,27 @@ Multi-agent team execution modeled on how real engineering teams work. Same laun
 
 ```mermaid
 graph TD
-    U["User: takt team"] --> S["Session Agent"]
-    S --> |"spawn background Task"| O["Orchestrator<br/><small>Sonnet · bypassPermissions</small>"]
-    S --> |"monitor"| M["Print wave/story updates"]
+    U["takt team"] --> S["Session"]
+    S -- "spawn" --> O["Orchestrator"]
+    S -- "poll" --> M["Monitor"]
 
     O --> T["TeamCreate"]
     T --> WL{"Wave Loop"}
 
-    WL --> |"Wave N"| W1["Worker 1<br/><small>worktree isolation</small>"]
-    WL --> |"Wave N"| W2["Worker 2<br/><small>worktree isolation</small>"]
-    WL --> |"Wave N"| W3["Worker ...<br/><small>worktree isolation</small>"]
+    WL --> W1["Worker 1"]
+    WL --> W2["Worker 2"]
+    WL --> W3["Worker ..."]
 
-    W1 --> MP["Merge Planning<br/><small>read workbooks, find overlaps</small>"]
+    W1 --> MP["Plan Merge"]
     W2 --> MP
     W3 --> MP
 
-    MP --> ME["Merge Execution<br/><small>git merge --no-ff, test per merge</small>"]
+    MP --> ME["Merge + Test"]
     ME --> WL
 
-    WL --> |"all waves done"| SV["Verifier Task"]
-    SV --> |"PASSED"| C["COMPLETE"]
-    SV --> |"FAILED"| FL["Fix Loop → re-verify"]
+    WL -- "all done" --> SV["Verifier"]
+    SV -- "PASSED" --> C["COMPLETE"]
+    SV -- "FAILED" --> FL["Fix Loop"]
     FL --> SV
 
     style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
