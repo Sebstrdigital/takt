@@ -87,11 +87,11 @@ takt team
 **How it works:**
 
 1. **Wave planning** — The scrum master reads `stories.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
-2. **Worktree isolation** — Each worker gets its own git worktree (`.worktrees/<story-id>/`), so agents work in parallel without stepping on each other's files.
+2. **Worktree isolation** — Each worker runs with Claude Code's native `isolation: "worktree"` feature, so agents work in parallel without stepping on each other's files. The platform creates and cleans up worktrees automatically.
 3. **Parallel implementation** — Workers implement their stories, each writing a workbook with decisions, files changed, and blockers.
 4. **Merge planning** — When a wave's workers finish, the scrum master reads their workbooks to identify file overlaps and plans the merge order to minimize conflicts.
 5. **Sequential merge** — Stories are merged into main one by one. Tests run after each merge. If a conflict arises, the scrum master consults the original author (still idle with full context) to resolve it.
-6. **Cleanup** — Worktrees are removed after successful merge. Next wave begins.
+6. **Cleanup** — The platform removes worktrees automatically when worker agents exit. Next wave begins.
 7. **Scenario verification** — After all waves merge, the same verify-fix loop runs as in solo mode.
 
 The scrum master never writes code. It orchestrates, monitors, plans merges, and resolves conflicts.

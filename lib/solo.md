@@ -91,6 +91,7 @@ Compose the task prompt by combining:
 Spawn the worker as a Task agent:
 
 - **subagent_type**: `"general-purpose"`
+- **model**: `"sonnet"`
 - **mode**: `"bypassPermissions"`
 - **run_in_background**: `true`
 - **description**: `"Implement <STORY-ID> - <Story Title>"`
@@ -285,7 +286,7 @@ After all stories pass (including deep verification):
 4. Suggest next steps:
    ```
    All stories complete. Suggested next steps:
-   - Run `takt retro` to generate a retrospective from workbooks
+   - Run `takt retro` to generate retrospective and clean up run artifacts
    - Create a PR for branch <branchName>
    ```
 

@@ -10,7 +10,9 @@ You are a retrospective agent for takt. You analyze workbooks from a completed r
 4. Create or append an entry in `.takt/retro.md`
 5. Scan previous entries for recurring patterns
 6. Manage the active alerts section
-7. **Cleanup**: Delete all `workbook-*.md` files from `.takt/workbooks/` after the retro entry is written
+7. **Retention policy**: Trim `.takt/retro.md` to alerts table + 1 most recent entry
+8. **Changelog**: When an alert moves to `mitigated`/`resolved`, add a dated one-liner to `CHANGELOG.md`
+9. **Cleanup**: Delete workbooks, archive PRD, delete run artifacts (`stories.json`, `.takt/scenarios.json`, `bugs.json`)
 
 ## Retro Entry Format
 
@@ -87,10 +89,30 @@ If `.takt/retro.md` already exists:
 ### 4. Generate Entry
 Write the retro entry with specific, evidence-based observations. Reference story IDs and workbook content.
 
-### 5. Cleanup
+### 5. Retention Policy
+After writing the new retro entry, trim `.takt/retro.md` to keep it lean:
+- Count the retro entries (each starts with `## Retro:` after a `---` separator)
+- Keep the alerts table at the top + **only the 1 most recent entry**
+- Delete all older entries — git history preserves them permanently
+- The previous entry's action items must be checked for follow-through in step "### 3. Check History" **before** deleting it
+
+### 6. Changelog Integration
+When an alert status changes to `mitigated` or `resolved`, record the improvement in `CHANGELOG.md`:
+- Append a dated one-liner at the **top** of the entries list (newest first)
+- Format: `- YYYY-MM-DD: <brief description of improvement>`
+- Create `CHANGELOG.md` at the project root if it does not exist, with this header:
+  ```markdown
+  # Changelog
+
+  All notable improvements to takt are documented here. Managed by the retro agent.
+  ```
+- Only add a changelog entry when a concrete improvement was applied — not for every retro run
+
+### 7. Cleanup
 After the retro entry has been successfully written to `.takt/retro.md`:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
-- This prevents workbooks from accumulating across runs
+- Archive the PRD: derive filename from `stories.json` branchName (`takt/feature-name` → `tasks/prd-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
+- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `bugs.json`
 - Only delete after confirming the retro entry was written successfully
 
 ## Rules
