@@ -119,6 +119,65 @@ Human: "Build X"
 
 **When to implement:** After Gaps 1-5 are stable. Headless mode is the delivery mechanism for the full autonomous pipeline.
 
+#### Gap 7: DevOps Agent (CI/CD Monitor)
+
+**What:** Post-merge agent that monitors the CI/CD pipeline after a PR is merged. Watches deployment to staging, verifies the environment is healthy, and reports readiness for QA.
+
+**Design:**
+- Triggered after gap 5 (CI-aware merge) completes successfully
+- Monitors deployment pipeline via project-specific CLI tools (Vercel, Railway, AWS CLI, etc.)
+- Health checks: waits for staging URL to respond, checks logs for startup errors
+- On success: signals QA agent to begin
+- On failure: reads deployment logs, attempts fix (config issues, env vars), re-deploys (max 2 attempts)
+- If still failing: alerts human with deployment failure summary
+
+**Project-specific parts:** Deployment commands, staging URLs, health check endpoints. These would be configured per-project (e.g., in a `.takt/deploy.json` config), not baked into takt core.
+
+**When to implement:** After Gaps 1-6 are stable and the code delivery pipeline is proven.
+
+#### Gap 8: QA Agent (Playwright on Staging)
+
+**What:** Automated QA agent that writes and runs Playwright tests against the staging environment. Validates that the feature works end-to-end from a user's perspective before human spot-check.
+
+**Design:**
+- Reads acceptance criteria from stories.json + scenarios from `.takt/scenarios.json`
+- **Writes** Playwright test scripts (not browser integration — pure code, zero tokens during execution)
+- Runs: `npx playwright test` headlessly against staging URL
+- Parses results: pass/fail per scenario
+- On failure: captures screenshots + test output, generates a QA report
+- On success: generates QA summary with screenshots of key flows as evidence
+
+**Why Playwright, not browser integration:**
+- Browser integration (MCP/screenshots) is slow and token-heavy — every click is a round trip through the model
+- Playwright tests are pure code execution: fast, deterministic, zero token cost during the actual test run
+- The model only spends tokens writing tests and reading results — orders of magnitude cheaper
+- Browser integration reserved for visual debugging only (when a Playwright test fails and the model needs to see what's on screen)
+
+**Output:**
+- `qa-report.json` — pass/fail per scenario, screenshots, timing
+- PR comment or Slack notification with QA summary
+- Human does final spot-check on staging, then ships to production
+
+**When to implement:** After Gap 7 (needs a running staging environment to test against).
+
+### Target End State
+
+```
+Human: "Build X"
+  → Approve spec (PRD gates)
+  → Approve scope (stories.json)
+  ━━━━ LIGHTS OUT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  │ Execute stories (solo/team)                         │
+  │ Verify scenarios (behavior — up to 3 fix cycles)    │
+  │ Review code (quality — up to 2 fix cycles)          │
+  │ Create + merge PR (CI green)                        │
+  │ Retro (auto-triggered)                              │
+  │ Deploy to staging (DevOps agent monitors)           │
+  │ QA on staging (Playwright tests — zero token cost)  │
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  → Human spot-check on staging → Ship to production
+```
+
 ### Implementation Priority
 
 | Gap | Effort | Impact | Priority |
@@ -128,9 +187,11 @@ Human: "Build X"
 | 3. Automated PR | Small | High — removes manual step | Third |
 | 4. Auto-retro | Small | Medium — convenience | Fourth |
 | 5. CI-aware merge | Large | Medium — full automation | Fifth |
-| 6. Headless mode | Medium | High — enables lights-out | Last (capstone) |
+| 6. Headless mode | Medium | High — enables lights-out | Sixth |
+| 7. DevOps agent | Medium | High — deployment monitoring | Seventh |
+| 8. QA agent (Playwright) | Medium | High — pre-human validation | Last (capstone) |
 
-Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story. Gap 5 is its own PRD. Gap 6 ties everything together as the final capstone.
+Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story. Gap 5 is its own PRD. Gap 6 ties headless execution together. Gaps 7+8 extend takt beyond code delivery into deployment and QA — these are the final pieces for a complete lights-out software factory.
 
 ---
 
