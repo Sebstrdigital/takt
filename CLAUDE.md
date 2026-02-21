@@ -64,6 +64,15 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `passes`: `false` -> `true` when story complete
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
 
+## Markdown File Hygiene
+
+Keep the repo lean. Every markdown file must justify its presence. When creating or encountering `.md` files, apply this rule:
+
+- **Completed PRDs, roadmaps, TODOs, planning docs** — archive or delete once implemented. Git history is the permanent record.
+- **Keep only what's active**: prompt files (`lib/`, `commands/`, `agents/`), `CHANGELOG.md`, `CLAUDE.md`, `README.md`, `future-improvements.md`, and `.takt/retro.md`.
+
+If an `.md` file has served its purpose, remove it. Don't let stale docs accumulate.
+
 ### Team Mode: Waves
 - `waves` top-level field in stories.json groups stories by dependency
 - Wave N+1 doesn't start until Wave N is fully merged

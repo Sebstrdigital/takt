@@ -79,7 +79,7 @@ When all waves are done:
 3. The platform handles worktree cleanup automatically as worker agents exit. No manual cleanup is required.
 4. Run scenario verification (see below)
 5. Output: `<promise>COMPLETE</promise>`
-6. Suggest: "Run `takt retro` to generate a retrospective from the workbooks."
+6. Suggest: "Run `takt retro` to generate retrospective and clean up run artifacts."
 
 ## Scenario Verification Phase
 
