@@ -379,7 +379,6 @@ Add ability to mark tasks with different statuses.
       "priority": 4,
       "size": "medium",
       "passes": false,
-      "model": "sonnet",
       "verify": "deep",
       "startTime": "",
       "endTime": "",

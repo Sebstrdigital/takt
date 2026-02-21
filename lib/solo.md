@@ -91,6 +91,7 @@ Compose the task prompt by combining:
 Spawn the worker as a Task agent:
 
 - **subagent_type**: `"general-purpose"`
+- **model**: `"sonnet"`
 - **mode**: `"bypassPermissions"`
 - **run_in_background**: `true`
 - **description**: `"Implement <STORY-ID> - <Story Title>"`

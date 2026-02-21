@@ -31,6 +31,7 @@ git worktree add .worktrees/<story-id> -b takt/<story-id>
 ### 2. Spawn Workers
 For each story, spawn a Task agent:
 - `subagent_type`: `"general-purpose"` — **NEVER use custom agent types**. Always use `general-purpose`.
+- `model`: `"sonnet"`
 - `mode`: `"bypassPermissions"`
 - Working directory: `.worktrees/<story-id>/`
 - Prompt: Include the story details + worker instructions from `worker.md`
@@ -111,6 +112,7 @@ After all waves complete and cleanup is done, run scenario verification:
 
 3. Spawn a SINGLE verifier Task agent for all stories:
    - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
    - **mode**: `"bypassPermissions"`
    - **run_in_background**: `true`
    - **prompt**:

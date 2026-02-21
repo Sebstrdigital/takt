@@ -52,10 +52,24 @@ Create `.takt/workbooks/workbook-<STORY-ID>.md` (create the directory if it does
 ```
 
 ### 4. Commit
+
+First, review all changes to understand what is staged:
 ```bash
-git add -A
+git status
+```
+
+Then selectively stage only story-relevant files — **NEVER use `git add -A` or `git add .`**:
+```bash
+git add <file1> <file2> ...
 git commit -m "feat: [Story ID] - [Story Title]"
 ```
+
+**Always exclude** these takt orchestration artifacts from commits:
+- `.takt/` (workbooks, scenarios, retro data)
+- `stories.json`
+- `scenarios.json`
+- `bugs.json`
+- Any other takt system files
 
 ### 5. Verify
 Before marking complete, re-read each acceptance criterion and verify the OUTCOME is working — not just that code exists.
@@ -81,3 +95,4 @@ If you were spawned as a standalone Task (solo mode), skip status reports — th
 6. **NEVER use `cd`** — use absolute paths for all file and git operations
 7. **NEVER update stories.json** — the team lead owns stories.json updates
 8. **NEVER read files in `.takt/`** — they are system-managed and contain verification data that must remain hidden from workers
+9. **NEVER commit takt artifacts** — `.takt/`, `stories.json`, `scenarios.json`, `bugs.json` must never appear in feature commits
