@@ -100,6 +100,25 @@ Human: "Build X"
 
 **When to implement:** Only after Gaps 1-4 are stable. CI integration adds external system dependency.
 
+#### Gap 6: Headless Mode Integration
+
+**What:** Enable takt runs to be triggered non-interactively via Claude Code's headless mode (`claude -p`). The human sets intent via a script or CI trigger, takt executes the full pipeline autonomously, and the output is a PR ready for review.
+
+**Design:**
+- Entry point: `claude -p "takt solo" --allowedTools "..."` or a wrapper script
+- PRD + stories.json must already exist (headless skips the interactive PRD gates)
+- All output goes to structured logs instead of interactive terminal
+- On completion: PR created, retro committed, exit code reflects pass/fail
+- On failure: exit code non-zero, failure summary written to a log file or PR comment
+
+**Use cases:**
+- Scheduled feature builds (cron/CI triggers a takt run from a pre-approved PRD)
+- Batch processing multiple PRDs in sequence
+- Integration into existing CI/CD pipelines as a build step
+- True lights-out: human approves PRD in the morning, PR is ready by lunch
+
+**When to implement:** After Gaps 1-5 are stable. Headless mode is the delivery mechanism for the full autonomous pipeline.
+
 ### Implementation Priority
 
 | Gap | Effort | Impact | Priority |
@@ -108,9 +127,10 @@ Human: "Build X"
 | 2. Review-fix loop | Small | High — closes the loop | Second (with #1) |
 | 3. Automated PR | Small | High — removes manual step | Third |
 | 4. Auto-retro | Small | Medium — convenience | Fourth |
-| 5. CI-aware merge | Large | Medium — full automation | Last |
+| 5. CI-aware merge | Large | Medium — full automation | Fifth |
+| 6. Headless mode | Medium | High — enables lights-out | Last (capstone) |
 
-Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story. Gap 5 is its own PRD.
+Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story. Gap 5 is its own PRD. Gap 6 ties everything together as the final capstone.
 
 ---
 
