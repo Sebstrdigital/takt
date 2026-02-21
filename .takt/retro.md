@@ -2,9 +2,9 @@
 
 | Status | Alert | First Seen | Last Seen |
 |--------|-------|------------|-----------|
-| potential | Opus too slow for worker agents | 2026-02-19 | 2026-02-19 |
-| potential | Workbook generation inconsistent across workers | 2026-02-19 | 2026-02-19 |
-| potential | Stale workbooks accumulate across runs | 2026-02-19 | 2026-02-19 |
+| mitigated | Opus too slow for worker agents | 2026-02-19 | 2026-02-21 |
+| mitigated | Workbook generation inconsistent across workers | 2026-02-19 | 2026-02-21 |
+| mitigated | Stale workbooks accumulate across runs | 2026-02-19 | 2026-02-21 |
 
 ---
 
@@ -27,9 +27,9 @@
 - **Workbook hygiene needs enforcement**: Two runs' worth of workbooks accumulated because retro wasn't run between them. The new cleanup step in retro.md should prevent this going forward.
 
 ### Action Items
-- [ ] Default worker model to Sonnet — only use Opus for stories explicitly marked as complex reasoning tasks
-- [ ] Investigate why US-003 and US-004 workers didn't produce workbooks — may need stricter enforcement in worker.md
-- [ ] Run `takt retro` after every execution to prevent workbook accumulation (consider adding a reminder to solo.md completion output)
+- [x] Default worker model to Sonnet — only use Opus for stories explicitly marked as complex reasoning tasks
+- [x] Investigate why US-003 and US-004 workers didn't produce workbooks — may need stricter enforcement in worker.md
+- [x] Run `takt retro` after every execution to prevent workbook accumulation (consider adding a reminder to solo.md completion output)
 
 ### Metrics
 - Stories completed: 4/4
