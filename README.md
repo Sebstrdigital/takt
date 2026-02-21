@@ -206,7 +206,7 @@ Suggested automatically after each solo or team run completes. The value of retr
 |------|---------|------------|------------|
 | `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review | Orchestrator, workers |
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
-| `.takt/bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Orchestrator, fix workers |
+| `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Orchestrator, fix workers |
 | `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Orchestrator |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent | Human |
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command | Human |
@@ -215,7 +215,7 @@ Suggested automatically after each solo or team run completes. The value of retr
 ## Installation
 
 ```bash
-git clone https://github.com/duadigital/takt.git
+git clone https://github.com/Sebstrdigital/takt.git
 cd takt && ./install.sh
 ```
 
