@@ -159,10 +159,16 @@ echo ""
 
 # --- CLAUDE.md section ---
 echo "Config -> $CLAUDE_MD"
-if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
-    mkdir -p "$CLAUDE_DIR"
-    cat >> "$CLAUDE_MD" << 'SECTION'
+mkdir -p "$CLAUDE_DIR"
+[ -f "$CLAUDE_MD" ] || touch "$CLAUDE_MD"
 
+TAKT_SECTION_START="<!-- takt:start -->"
+TAKT_SECTION_END="<!-- takt:end -->"
+
+generate_takt_section() {
+    cat << 'SECTION'
+
+<!-- takt:start -->
 ## takt - Autonomous Agent Orchestrator
 
 **Proactive usage — IMPORTANT:**
@@ -200,12 +206,34 @@ If the user mentions takt outside of a planning session (no active PRD, no featu
 - `/takt-prd` — generate PRD from feature description
 - `/takt` — convert PRD to stories.json + .takt/scenarios.json
 - `/tdd` — TDD workflow
+<!-- takt:end -->
 SECTION
+}
+
+if grep -q "$TAKT_SECTION_START" "$CLAUDE_MD" 2>/dev/null; then
+    # Existing tagged section — replace it
+    new_section="$(generate_takt_section)"
+    # Use awk to replace between markers (inclusive)
+    awk -v start="$TAKT_SECTION_START" -v end="$TAKT_SECTION_END" -v replacement="$new_section" '
+        $0 ~ start { printing=0; printf "%s\n", replacement; next }
+        $0 ~ end { printing=1; next }
+        printing!=0 { print }
+        BEGIN { printing=1 }
+    ' "$CLAUDE_MD" > "$CLAUDE_MD.tmp" && mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
+    echo -e "  ${BLUE}updated${NC}  takt section"
+    updated=$((updated + 1))
+elif grep -q "## takt" "$CLAUDE_MD" 2>/dev/null; then
+    # Old untagged section — remove it and append tagged version
+    # Remove from "## takt" to end of file (old format was always at the end)
+    sed -i '' '/^## takt/,$d' "$CLAUDE_MD"
+    generate_takt_section >> "$CLAUDE_MD"
+    echo -e "  ${BLUE}updated${NC}  takt section (migrated to tagged format)"
+    updated=$((updated + 1))
+else
+    # No section at all — append
+    generate_takt_section >> "$CLAUDE_MD"
     echo -e "  ${GREEN}added${NC}    takt section"
     installed=$((installed + 1))
-else
-    echo -e "  ${GRAY}current${NC}  takt section already present"
-    skipped=$((skipped + 1))
 fi
 echo ""
 

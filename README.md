@@ -19,15 +19,51 @@ Most AI coding tools treat development as a single prompt-response cycle. Real s
 
 takt runs natively inside Claude Code. There is no CLI binary or bash script — you interact with it by typing phrases in Claude Code.
 
-```
-Plan  ──>  Scope  ──>  Execute  ──>  Verify  ──>  Review
- PRD       stories.json    workers      scenarios     takt retro
-           scenarios.json  implement    verify
-                                        bug tickets
-                                        fix loop
+```mermaid
+graph LR
+    A["Plan<br/><small>/takt-prd</small>"] --> B["Scope<br/><small>/takt</small>"]
+    B --> C["Execute<br/><small>takt solo · team</small>"]
+    C --> D["Verify<br/><small>hidden scenarios</small>"]
+    D --> E["Review<br/><small>takt retro</small>"]
+    D -- "FAILED" --> F["Fix Loop<br/><small>bugs.json → workers</small>"]
+    F --> D
+
+    style A fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style B fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style C fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style D fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
+    style E fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style F fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
 ```
 
-1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd`.
+### Planning Flow
+
+When planning a feature, takt intercepts plan mode to offer a structured PRD flow with gated checkpoints:
+
+```mermaid
+graph LR
+    U["User: plan a feature"] --> G{"takt PRD or<br/>Native plan?"}
+    G --> |"takt PRD"| W["Gate: Why<br/><small>confirm motivation</small>"]
+    G --> |"native"| NP["EnterPlanMode"]
+    W --> WH["Gate: What<br/><small>confirm scope</small>"]
+    WH --> WN["Gate: What Not<br/><small>confirm exclusions</small>"]
+    WN --> P["Write PRD"]
+    P --> R["Gate: Review<br/><small>convert to stories?</small>"]
+    R --> |"yes"| T["/takt → stories.json"]
+    T --> E["takt solo · team"]
+
+    style G fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style W fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style WH fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style WN fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style R fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style P fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style T fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style E fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style NP fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
+```
+
+1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd` with gated checkpoints (Why → What → What Not → Review).
 2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into two files: `stories.json` (visible to workers) and `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier).
 3. **Execute** — Say "takt solo" or "takt team". Workers implement stories against acceptance criteria. They never see the hidden scenarios.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
@@ -66,7 +102,37 @@ This is prompt-level architectural isolation, not cryptographic enforcement. The
 
 ### takt solo — Sprint Execution
 
-Single orchestrator, one story at a time. The orchestrator reads `stories.json`, picks the next incomplete story, spawns a fresh worker agent to implement it, verifies acceptance criteria, updates `stories.json`, and moves to the next story. After all stories pass, runs scenario verification.
+Single orchestrator, one story at a time. The session agent reads `stories.json`, spawns a background orchestrator with all context embedded, and monitors progress. The orchestrator picks the next incomplete story, spawns a fresh worker agent to implement it, verifies acceptance criteria, updates `stories.json`, and moves to the next story. After all stories pass, runs scenario verification.
+
+```mermaid
+graph TD
+    U["User: takt solo"] --> S["Session Agent"]
+    S --> |"read stories.json<br/>worker.md, verifier.md"| S
+    S --> |"spawn background Task<br/>bypassPermissions"| O["Orchestrator<br/><small>Sonnet · autonomous</small>"]
+    S --> |"TaskOutput loop"| M["Monitor & Print<br/><small>one-liner updates</small>"]
+
+    O --> L{"Story Loop"}
+    L --> |"next story"| W["Worker Task<br/><small>Sonnet · bypassPermissions</small>"]
+    W --> |"commit + workbook"| V{"Verify<br/>completion"}
+    V --> |"pass"| L
+    V --> |"fail · retry once"| W
+    L --> |"all done"| SV["Verifier Task<br/><small>Sonnet · bypassPermissions</small>"]
+    SV --> |"PASSED"| C["COMPLETE"]
+    SV --> |"FAILED"| FL{"Fix Loop<br/><small>max 3 cycles</small>"}
+    FL --> FW["Fix Workers"]
+    FW --> SV
+
+    style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style M fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style W fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style FW fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
+    style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
+    style L fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
+    style V fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
+    style FL fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
+```
 
 Say in Claude Code:
 ```
@@ -77,7 +143,47 @@ Best for: small features (2-5 stories), linear dependencies, quick delivery.
 
 ### takt team — Parallel Delivery
 
-Multi-agent team execution modeled on how real engineering teams work.
+Multi-agent team execution modeled on how real engineering teams work. Same launcher pattern as solo — session agent spawns a background orchestrator that runs autonomously.
+
+```mermaid
+graph TD
+    U["User: takt team"] --> S["Session Agent"]
+    S --> |"spawn background Task"| O["Orchestrator<br/><small>Sonnet · bypassPermissions</small>"]
+    S --> |"monitor"| M["Print wave/story updates"]
+
+    O --> T["TeamCreate"]
+    T --> WL{"Wave Loop"}
+
+    WL --> |"Wave N"| W1["Worker 1<br/><small>worktree isolation</small>"]
+    WL --> |"Wave N"| W2["Worker 2<br/><small>worktree isolation</small>"]
+    WL --> |"Wave N"| W3["Worker ...<br/><small>worktree isolation</small>"]
+
+    W1 --> MP["Merge Planning<br/><small>read workbooks, find overlaps</small>"]
+    W2 --> MP
+    W3 --> MP
+
+    MP --> ME["Merge Execution<br/><small>git merge --no-ff, test per merge</small>"]
+    ME --> WL
+
+    WL --> |"all waves done"| SV["Verifier Task"]
+    SV --> |"PASSED"| C["COMPLETE"]
+    SV --> |"FAILED"| FL["Fix Loop → re-verify"]
+    FL --> SV
+
+    style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style M fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style T fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style W1 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style W2 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style W3 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style MP fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style ME fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
+    style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
+    style WL fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
+    style FL fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
+```
 
 Say in Claude Code:
 ```
