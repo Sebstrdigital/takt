@@ -20,11 +20,11 @@ Most AI coding tools treat development as a single prompt-response cycle. Real s
 takt runs natively inside Claude Code. There is no CLI binary or bash script — you interact with it by typing phrases in Claude Code.
 
 ```mermaid
-graph LR
+graph TD
     A["Plan"] -- "/takt-prd" --> B["Scope"]
     B -- "/takt" --> C["Execute"]
-    C -- "solo · team" --> D["Verify"]
-    D --> E["Review"]
+    C --> D["Verify"]
+    D -- "PASSED" --> E["Review"]
     D -- "FAILED" --> F["Fix Loop"]
     F --> D
 
@@ -41,12 +41,12 @@ graph LR
 When planning a feature, takt intercepts plan mode to offer a structured PRD flow with gated checkpoints:
 
 ```mermaid
-graph LR
+graph TD
     U["Plan a feature"] --> G{"takt PRD or\nNative plan?"}
-    G -- "takt" --> W["Why"]
+    G -- "takt" --> W["Gate: Why"]
     G -- "native" --> NP["Plan Mode"]
-    W --> WH["What"]
-    WH --> WN["What Not"]
+    W --> WH["Gate: What"]
+    WH --> WN["Gate: What Not"]
     WN --> P["Write PRD"]
     P --> R{"Review"}
     R -- "convert" --> T["stories.json"]
@@ -107,23 +107,18 @@ Single orchestrator, one story at a time. The session agent reads `stories.json`
 ```mermaid
 graph TD
     U["takt solo"] --> S["Session"]
-    S -- "read files" --> S
-    S -- "spawn" --> O["Orchestrator"]
-    S -- "poll" --> M["Monitor"]
-
+    S --> O["Orchestrator"]
     O --> L{"Story Loop"}
     L -- "next" --> W["Worker"]
     W --> V{"Pass?"}
     V -- "yes" --> L
-    V -- "no, retry" --> W
+    V -- "fail" --> W
     L -- "all done" --> SV["Verifier"]
     SV -- "PASSED" --> C["COMPLETE"]
-    SV -- "FAILED" --> FL{"Fix Loop"}
-    FL --> FW["Fix Workers"]
+    SV -- "FAILED" --> FW["Fix Workers"]
     FW --> SV
 
     style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style M fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
     style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
     style W fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
     style FW fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
@@ -131,7 +126,6 @@ graph TD
     style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style L fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
     style V fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
-    style FL fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
 ```
 
 Say in Claude Code:
@@ -148,41 +142,24 @@ Multi-agent team execution modeled on how real engineering teams work. Same laun
 ```mermaid
 graph TD
     U["takt team"] --> S["Session"]
-    S -- "spawn" --> O["Orchestrator"]
-    S -- "poll" --> M["Monitor"]
-
-    O --> T["TeamCreate"]
-    T --> WL{"Wave Loop"}
-
-    WL --> W1["Worker 1"]
-    WL --> W2["Worker 2"]
-    WL --> W3["Worker ..."]
-
-    W1 --> MP["Plan Merge"]
-    W2 --> MP
-    W3 --> MP
-
-    MP --> ME["Merge + Test"]
-    ME --> WL
-
+    S --> O["Orchestrator"]
+    O --> WL{"Wave Loop"}
+    WL --> W["Workers"]
+    W --> MP["Merge + Test"]
+    MP --> WL
     WL -- "all done" --> SV["Verifier"]
     SV -- "PASSED" --> C["COMPLETE"]
-    SV -- "FAILED" --> FL["Fix Loop"]
-    FL --> SV
+    SV -- "FAILED" --> FW["Fix Workers"]
+    FW --> SV
 
     style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style M fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
     style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
-    style T fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
-    style W1 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
-    style W2 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
-    style W3 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style W fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style FW fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
     style MP fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
-    style ME fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
     style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
     style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style WL fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
-    style FL fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
 ```
 
 Say in Claude Code:
