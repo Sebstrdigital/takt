@@ -67,4 +67,4 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 ### Team Mode: Waves
 - `waves` top-level field in stories.json groups stories by dependency
 - Wave N+1 doesn't start until Wave N is fully merged
-- Workers use git worktrees in `.worktrees/` for isolation
+- Workers use Claude Code's native `isolation: "worktree"` feature for isolation (platform-managed, no manual worktree commands needed)
