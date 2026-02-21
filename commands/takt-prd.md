@@ -92,10 +92,12 @@ Each story needs:
 
 #### Acceptance Criteria Rules
 
-- **Max 3-4 acceptance criteria per story.** Each criterion should describe a real behavior or outcome.
+- **Max 3-4 acceptance criteria per story.** Each criterion must describe an observable behavioral outcome — what a user or QA engineer would see, not how the code achieves it.
 - **"Typecheck passes" and "lint passes" are ASSUMED** for every story — never list them as explicit criteria.
-- Criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
+- Criteria must describe behaviors, not implementation tasks. "Add `status` column to tasks table" is an implementation task. "When a new task is created, it has a default status of 'pending'" is a behavioral outcome.
 - **For any story with UI changes:** Always include "Verify in browser using Chrome integration" as one of the criteria.
+
+**Why behavioral outcomes?** Behavioral criteria flow naturally into BDD scenarios used by the verifier. When criteria describe what a user observes, the verifier can independently confirm the feature works — rather than just confirming the worker followed instructions.
 
 **Format:**
 ```markdown
@@ -103,10 +105,21 @@ Each story needs:
 **Description:** As a [user], I want [feature] so that [benefit].
 
 **Acceptance Criteria:**
-- [ ] Specific verifiable behavior or outcome
-- [ ] Another criterion (max 3-4 total)
+- [ ] Observable behavioral outcome (what happens when X)
+- [ ] Another behavioral outcome (max 3-4 total)
 - [ ] **[UI stories only]** Verify in browser using Chrome integration
 ```
+
+**Good criteria (behavioral outcomes):**
+- "When a new task is created, it has a default status of 'pending'"
+- "When a user clicks delete, a confirmation dialog appears before the item is removed"
+- "When filtered by 'High' priority, only high-priority tasks are visible in the list"
+- "After changing status to 'Done', the change persists across page refreshes"
+
+**Bad criteria (implementation tasks):**
+- "Add `status` column to tasks table" — describes code change, not behavior
+- "Create migration file" — describes an artifact, not an outcome
+- "Update API endpoint" — describes what to build, not what it does
 
 #### Anti-Patterns (What NOT to Do)
 
@@ -115,6 +128,7 @@ Each story needs:
 - **BAD: 7+ acceptance criteria per story.** Trim to the 3-4 that actually matter.
 - **BAD: "Typecheck passes" as an explicit AC.** It's assumed for every story.
 - **BAD: 7-10 tiny stories for a feature that could be 3-4 broader ones.** Fewer stories = less overhead, faster delivery.
+- **BAD: Implementation checklists as acceptance criteria.** "Add column", "Create file", "Update function" are implementation tasks, not verifiable behavioral outcomes.
 
 ### 4. Functional Requirements
 Numbered list of specific functionalities:
@@ -187,25 +201,25 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 **Description:** As a user, I want tasks to have a visible priority level so I can see what needs attention first.
 
 **Acceptance Criteria:**
-- [ ] Priority column added to tasks table ('high' | 'medium' | 'low', default 'medium')
-- [ ] Each task card shows colored priority badge (red=high, yellow=medium, gray=low)
+- [ ] When a new task is created, it has a default priority of 'medium'
+- [ ] Each task in the list shows a colored badge reflecting its priority (red=high, yellow=medium, gray=low)
 - [ ] Verify in browser using Chrome integration
 
 ### US-002: Set and change priority
 **Description:** As a user, I want to set or change a task's priority so I can reprioritize as things evolve.
 
 **Acceptance Criteria:**
-- [ ] Priority dropdown in task edit modal, pre-selected to current value
-- [ ] Saves immediately on selection change
+- [ ] When a user opens a task's edit modal, the current priority is pre-selected in the dropdown
+- [ ] When a user selects a different priority, the change is saved immediately without a separate submit action
 - [ ] Verify in browser using Chrome integration
 
 ### US-003: Filter and sort by priority
 **Description:** As a user, I want to filter the task list by priority so I can focus on high-priority items.
 
 **Acceptance Criteria:**
-- [ ] Filter dropdown with options: All | High | Medium | Low
-- [ ] Filter persists in URL params
-- [ ] Tasks sorted by priority within each status column (high → medium → low)
+- [ ] When a priority filter is applied, only tasks matching that priority are shown (options: All, High, Medium, Low)
+- [ ] When a user navigates away and returns, the active priority filter is preserved via URL params
+- [ ] Within each status column, high-priority tasks appear above medium, which appear above low
 
 ## Functional Requirements
 

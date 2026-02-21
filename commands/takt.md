@@ -216,22 +216,28 @@ Stories execute in priority order. Earlier stories must not depend on later ones
 
 ---
 
-## Acceptance Criteria: Must Be Verifiable
+## Acceptance Criteria: Must Be Behavioral and Verifiable
 
-Each criterion must be something takt can CHECK, not something vague.
+Each criterion must describe an **observable behavioral outcome** — something a user or QA engineer would see or measure. This is not just about being verifiable; it's about writing criteria that describe the system's behavior, not its implementation.
 
-### Good criteria (verifiable):
-- "Add `status` column to tasks table with default 'pending'"
-- "Filter dropdown has options: All, Active, Completed"
-- "Clicking delete shows confirmation dialog"
-- "Typecheck passes"
+**Why behavioral criteria?** Behavioral criteria flow naturally into BDD scenarios. When acceptance criteria describe what a user observes ("when X happens, Y is visible"), the verifier can independently confirm the feature works from a QA perspective — rather than just checking that a file was created or a function was called.
+
+### Good criteria (behavioral, observable):
+- "When a new task is created, it has a default status of 'pending'"
+- "When the filter is set to 'Active', only active tasks appear in the list"
+- "When a user clicks delete, a confirmation dialog appears before the item is removed"
+- "After changing status, the update persists across page refreshes"
 - "Tests pass"
 
-### Bad criteria (vague):
-- "Works correctly"
-- "User can do X easily"
-- "Good UX"
-- "Handles edge cases"
+### Acceptable criteria (verifiable but implementation-leaning):
+- "Filter dropdown has options: All, Active, Completed" — acceptable, describes visible UI
+- "Typecheck passes" — acceptable, always required
+
+### Bad criteria (implementation tasks, not outcomes):
+- "Add `status` column to tasks table" — describes code change, not behavior
+- "Works correctly" — vague
+- "User can do X easily" — vague
+- "Handles edge cases" — vague
 
 ### Always include as final criterion:
 ```
@@ -422,6 +428,14 @@ When converting a PRD, ALSO generate `.takt/scenarios.json` alongside `stories.j
 Acceptance criteria tell workers what to build. Scenarios tell the verifier what to CHECK. They are independent on purpose: if scenarios were derived from the same acceptance criteria the worker reads, the verifier would just confirm the worker followed instructions — not that the feature actually works.
 
 Scenarios must describe **observable behavioral outcomes** — what a QA engineer would manually test — not implementation details or copy-pasted acceptance criteria.
+
+### Connection to BDD Criteria
+
+When PRD acceptance criteria are already written as behavioral outcomes ("when X happens, the user sees Y"), scenario generation becomes natural. Behavioral criteria and BDD scenarios speak the same language: observable outcomes from a user's perspective.
+
+If PRD criteria are implementation-leaning ("add column X", "create endpoint Y"), you must translate them into behavioral scenarios before writing. Ask: "What would a QA engineer verify to confirm this works?" That translation is your scenario.
+
+The pipeline is: behavioral criteria → behavioral scenarios → behavioral verification. Each step reinforces the same question: "Does the system behave as expected from the user's perspective?"
 
 ### Scenarios File Format
 

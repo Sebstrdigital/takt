@@ -70,3 +70,119 @@ Ideas and risk mitigations to revisit after real-world usage. Don't implement un
 **Potential mitigation:** Workbooks store agent ID. Agent can be shut down and a new agent can be spawned that reads the workbook to reconstruct context. Not as good as preserved context, but better than nothing.
 
 **When to implement:** When retro entries show agents unable to help with merge conflicts due to context limits.
+
+---
+
+## Cost Tracking Per Story/Run
+
+**Idea:** Track token cost per story and per full takt run. Display cost in the retro summary alongside time estimates.
+
+**Benefit:** Helps users understand the cost/story trade-off for `inline` vs `deep` verification and `solo` vs `team` mode. Improves ETA accuracy for future estimates.
+
+**When to implement:** When users start asking "how much did this run cost?" regularly.
+
+---
+
+## Lightweight Roadmap and State Files
+
+**Idea:** Optional `ROADMAP.md` for near-term milestones and `STATE.md` for current focus, decisions, and blockers. Keep them small and updated during iteration cadence.
+
+**When to implement:** When teams running takt want a lightweight planning artifact alongside stories.json.
+
+---
+
+## Optional Per-Story Plan Artifact
+
+**Idea:** Store a short task list per story in `plans/` or `PLAN.md` before implementation begins. Keep steps atomic to reduce variance across iterations. Use as a reference when a story spans multiple files.
+
+**When to implement:** When retro entries show agents making poor implementation ordering decisions.
+
+---
+
+## Phase Wrapper Checklist
+
+**Idea:** Lightweight phase folders (e.g., `phases/01/`) with a checklist template to enforce consistency across iterations: discuss → plan → execute → verify. Allows batching stories while keeping context fresh.
+
+**When to implement:** When teams need more structure around story execution phases.
+
+---
+
+## Per-Iteration Summary Artifact
+
+**Idea:** Short `SUMMARY.md` per iteration capturing what changed and how it was verified. Useful for later review and as a restart point if context is lost.
+
+**When to implement:** When retro entries show difficulty reconstructing what happened in a previous iteration.
+
+---
+
+## Per-Story Verification Notes
+
+**Idea:** Minimal checklist or `verifications/` entry per story that ties acceptance criteria to actual verification steps and outcomes. Provides traceable QA records.
+
+**When to implement:** When deep verification failures are hard to diagnose because verification steps aren't recorded.
+
+---
+
+## Track Deep Verification Status Per Story
+
+**Idea:** Add a `deepVerified` field to user stories in stories.json. Skip re-verifying stories that already passed deep verification. Reset `deepVerified` to false if the story changes after verification.
+
+**When to implement:** When full re-verification runs after small changes waste significant tokens.
+
+---
+
+## Better Error Recovery When Iteration Fails Mid-Story
+
+**Idea:** When a worker agent fails mid-story (crashes, context exceeded, tool error), the orchestrator should resume from a checkpoint rather than re-running the full story. Workbook state could serve as the checkpoint.
+
+**When to implement:** When retro entries show wasted work from mid-story failures.
+
+---
+
+## Integration with GitHub Issues and PRs
+
+**Idea:** Automatically create or link GitHub Issues for each story, and open a PR when takt completes. Stories would reference their Issue number; completion updates the Issue.
+
+**When to implement:** When teams want takt execution visible in their existing GitHub workflow.
+
+---
+
+## Web Dashboard for Monitoring
+
+**Idea:** A lightweight web UI showing live takt run progress: stories status, wave progress, time elapsed, estimated completion. Could read from stories.json directly.
+
+**When to implement:** When teams running `takt team` want visibility into parallel agent progress beyond terminal output.
+
+---
+
+## Slack and Discord Notifications on Completion
+
+**Idea:** Send a completion notification to a Slack or Discord channel when a takt run finishes, including a summary of stories completed and any failures.
+
+**When to implement:** When teams want async visibility into takt runs without watching the terminal.
+
+---
+
+## Auto-Improvement of Skills
+
+**Idea:** Project skills may evolve to be better than the source skills in `~/.claude/lib/takt/`. Need a mechanism to surface improvements back to the source so future projects benefit.
+
+**When to implement:** When retro entries show consistent project-level skill improvements that would benefit all projects.
+
+---
+
+## Bidirectional Skill Sync
+
+**Idea:** The current install pattern overwrites installed skills with source. Consider a merge strategy that preserves project-specific improvements when upgrading, rather than overwriting.
+
+**When to implement:** When projects have made meaningful improvements to their local skill copies that would be lost on upgrade.
+
+---
+
+## Completion Summary with Verified Metrics and Qualitative Analysis
+
+**Idea:** Generate a rich completion summary when all stories pass. Two parts:
+- **Verified metrics (from git/tools, not LLM):** story count, commit count, lines changed, files changed, test results, total time
+- **Qualitative analysis (from LLM):** implementation quality observations, workflow notes, key decisions
+
+**When to implement:** When retro entries show demand for a post-run summary artifact beyond the workbooks.
