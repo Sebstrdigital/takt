@@ -110,9 +110,7 @@ graph TD
     S --> O["Orchestrator"]
     O --> L{"Story Loop"}
     L -- "next" --> W["Worker"]
-    W --> V{"Pass?"}
-    V -- "yes" --> L
-    V -- "fail" --> W
+    W -- "done" --> L
     L -- "all done" --> SV["Verifier"]
     SV -- "PASSED" --> C["COMPLETE"]
     SV -- "FAILED" --> FW["Fix Workers"]
