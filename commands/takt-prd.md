@@ -2,22 +2,23 @@
 name: takt-prd
 description: "Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."
 source_id: takt
-version: 1.0.0
+version: 2.0.0
 ---
 
 # PRD Generator
 
-Create detailed Product Requirements Documents that are clear, actionable, and suitable for implementation.
+Create detailed Product Requirements Documents through a gated what/why/why-not flow using AskUserQuestion checkpoints.
 
 ---
 
 ## The Job
 
-1. Receive a feature description from the user
-2. Read the project's CLAUDE.md for architecture, conventions, and key files
-3. Ask targeted clarifying questions about genuine ambiguities (skip if the request is already clear)
-4. Generate a structured PRD based on project context and answers
-5. Save to `tasks/prd-[feature-name].md`
+1. Read project context
+2. **Gate: Why** — Confirm motivation and problem
+3. **Gate: What** — Confirm scope and technical decisions
+4. **Gate: What Not** — Confirm explicit exclusions
+5. Write the PRD
+6. **Gate: Review** — Present summary and offer conversion to stories.json
 
 **Important:** Do NOT start implementing. Just create the PRD.
 
@@ -33,64 +34,92 @@ Before asking any questions, read the project's **CLAUDE.md** to understand:
 
 If the feature targets a specific area (e.g., "add a settings page"), also glance at the relevant directory to see what's already there. But don't do a broad codebase scan — CLAUDE.md should cover the big picture.
 
-## Step 2: Clarifying Questions (Adaptive)
+## Step 2: Gate — Why
 
-**Only ask about genuine ambiguities.** If the user's description + codebase context already answers a question, skip it.
+Use **AskUserQuestion** to confirm the motivation.
 
-### Rules:
-
-- **No fixed count.** Ask 0 questions if the request is crystal clear. Ask 6 if it's genuinely ambiguous. The right number depends on the request.
-- **Implementation-focused.** Ask about technical decisions, not product basics the user already stated.
-- **Informed by CLAUDE.md.** Reference what you know from the project context — don't ask questions you could answer by reading CLAUDE.md.
-- **Lettered options for speed.** When asking, provide options so users can respond with "1A, 2C" etc.
-
-### Good questions (informed, specific):
+Present your understanding of the "why" based on what the user said and what you learned from the codebase. Ask the user to confirm or correct.
 
 ```
-1. I see you have a `notifications` table but no in-app notification UI yet.
-   Should this feature include an in-app notification center, or just email?
-   A. In-app only
-   B. Email only
-   C. Both
-   D. Other: [please specify]
-
-2. Your current auth uses NextAuth with session strategy.
-   Should the new admin role use the same session system or a separate JWT-based approach?
-   A. Same NextAuth sessions (simpler)
-   B. Separate JWT for admin (more isolated)
+AskUserQuestion:
+  question: "Here's my understanding of the motivation. Is this correct?"
+  header: "Why"
+  options:
+    - label: "Yes, that's right"
+      description: "<your 1-2 sentence summary of the motivation/problem>"
+    - label: "Partially — let me clarify"
+      description: "I'll refine the why based on your correction"
+    - label: "No — different motivation"
+      description: "I'll ask you to describe the actual problem"
 ```
 
-### Bad questions (generic, answerable from context):
+If the user corrects, incorporate their feedback before proceeding.
 
-- "What is the primary goal?" — The user just told you.
-- "Who is the target user?" — Obvious from the feature description.
-- "What tech stack are you using?" — It's in CLAUDE.md.
+## Step 3: Gate — What
 
----
+Use **AskUserQuestion** to confirm scope and key technical decisions.
 
-## Step 3: PRD Structure
+Present a scoped list of what you understand needs to be built. If there are genuine technical decisions (e.g., which auth method, which storage approach), present them as options.
 
-Generate the PRD with these sections:
+```
+AskUserQuestion:
+  question: "Here's what I plan to include in scope. Is this correct?"
+  header: "What"
+  options:
+    - label: "Yes, build this"
+      description: "<bulleted list of features/deliverables>"
+    - label: "Adjust scope"
+      description: "I'll modify the scope based on your feedback"
+    - label: "Too broad — reduce scope"
+      description: "I'll cut it down to a smaller deliverable"
+```
 
-### 1. Introduction/Overview
+If the feature involves genuine technical choices (not ones you can answer from CLAUDE.md), ask a follow-up AskUserQuestion with the specific options. Only ask about real ambiguities — don't ask about things the codebase already answers.
+
+## Step 4: Gate — What Not
+
+Use **AskUserQuestion** to confirm explicit exclusions.
+
+Based on the confirmed scope, present what you're explicitly excluding. This maps directly to the PRD's Non-Goals section.
+
+```
+AskUserQuestion:
+  question: "Here's what I'm explicitly excluding. Anything else out of scope?"
+  header: "What not"
+  options:
+    - label: "Exclusions look right"
+      description: "<bulleted list of non-goals>"
+    - label: "Add more exclusions"
+      description: "I'll add additional items to the non-goals list"
+    - label: "Something here should be in scope"
+      description: "I'll move items back into scope"
+```
+
+## Step 5: Write PRD
+
+Based on the confirmed why/what/what-not, write the PRD. No gate needed — just write it using the confirmed answers.
+
+### PRD Structure
+
+#### 1. Introduction/Overview
 Brief description of the feature and the problem it solves.
 
-### 2. Goals
+#### 2. Goals
 Specific, measurable objectives (bullet list).
 
-### 3. User Stories
+#### 3. User Stories
 Each story needs:
 - **Title:** Short descriptive name
 - **Description:** "As a [user], I want [feature] so that [benefit]"
 - **Acceptance Criteria:** Verifiable checklist of what "done" means
 
-#### Story Scope
+##### Story Scope
 
 - **Prefer fewer stories with broader scope** over many tiny stories. A single story can touch 3-4 files — that's fine.
 - **Aim for 3-5 stories** for most features, not 7-10.
 - **Roll ancillary work into the story that needs it.** If a story requires a config file, migration, or doc update, that's part of the story — not a separate story.
 
-#### Acceptance Criteria Rules
+##### Acceptance Criteria Rules
 
 - **Max 3-4 acceptance criteria per story.** Each criterion must describe an observable behavioral outcome — what a user or QA engineer would see, not how the code achieves it.
 - **"Typecheck passes" and "lint passes" are ASSUMED** for every story — never list them as explicit criteria.
@@ -121,7 +150,7 @@ Each story needs:
 - "Create migration file" — describes an artifact, not an outcome
 - "Update API endpoint" — describes what to build, not what it does
 
-#### Anti-Patterns (What NOT to Do)
+##### Anti-Patterns (What NOT to Do)
 
 - **BAD: Separate story for documentation.** Roll doc updates into the story they document.
 - **BAD: Separate story for config files or migrations.** Roll into the story that needs them.
@@ -130,32 +159,30 @@ Each story needs:
 - **BAD: 7-10 tiny stories for a feature that could be 3-4 broader ones.** Fewer stories = less overhead, faster delivery.
 - **BAD: Implementation checklists as acceptance criteria.** "Add column", "Create file", "Update function" are implementation tasks, not verifiable behavioral outcomes.
 
-### 4. Functional Requirements
+#### 4. Functional Requirements
 Numbered list of specific functionalities:
 - "FR-1: The system must allow users to..."
 - "FR-2: When a user clicks X, the system must..."
 
 Be explicit and unambiguous.
 
-### 5. Non-Goals (Out of Scope)
-What this feature will NOT include. Critical for managing scope.
+#### 5. Non-Goals (Out of Scope)
+What this feature will NOT include. Populated from the confirmed "What Not" gate.
 
-### 6. Design Considerations (Optional)
+#### 6. Design Considerations (Optional)
 - UI/UX requirements
 - Link to mockups if available
 - Relevant existing components to reuse
 
-### 7. Technical Considerations (Optional)
+#### 7. Technical Considerations (Optional)
 - Known constraints or dependencies
 - Integration points with existing systems
 - Performance requirements
 
-### 8. Success Metrics
+#### 8. Success Metrics
 How will success be measured?
-- "Reduce time to complete X by 50%"
-- "Increase conversion rate by 10%"
 
-### 9. Open Questions
+#### 9. Open Questions
 Remaining questions or areas needing clarification.
 
 ---
@@ -180,74 +207,29 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 
 ---
 
-## Example PRD
+## Step 6: Gate — Review
 
-```markdown
-# PRD: Task Priority System
+After writing the PRD, present a summary and use **AskUserQuestion** to offer next steps:
 
-## Introduction
-
-Add priority levels to tasks so users can focus on what matters most. Tasks can be marked as high, medium, or low priority, with visual indicators and filtering.
-
-## Goals
-
-- Allow assigning priority (high/medium/low) to any task
-- Provide clear visual differentiation between priority levels
-- Enable filtering and sorting by priority
-
-## User Stories
-
-### US-001: Priority field and display
-**Description:** As a user, I want tasks to have a visible priority level so I can see what needs attention first.
-
-**Acceptance Criteria:**
-- [ ] When a new task is created, it has a default priority of 'medium'
-- [ ] Each task in the list shows a colored badge reflecting its priority (red=high, yellow=medium, gray=low)
-- [ ] Verify in browser using Chrome integration
-
-### US-002: Set and change priority
-**Description:** As a user, I want to set or change a task's priority so I can reprioritize as things evolve.
-
-**Acceptance Criteria:**
-- [ ] When a user opens a task's edit modal, the current priority is pre-selected in the dropdown
-- [ ] When a user selects a different priority, the change is saved immediately without a separate submit action
-- [ ] Verify in browser using Chrome integration
-
-### US-003: Filter and sort by priority
-**Description:** As a user, I want to filter the task list by priority so I can focus on high-priority items.
-
-**Acceptance Criteria:**
-- [ ] When a priority filter is applied, only tasks matching that priority are shown (options: All, High, Medium, Low)
-- [ ] When a user navigates away and returns, the active priority filter is preserved via URL params
-- [ ] Within each status column, high-priority tasks appear above medium, which appear above low
-
-## Functional Requirements
-
-- FR-1: Add `priority` field to tasks table ('high' | 'medium' | 'low', default 'medium')
-- FR-2: Display colored priority badge on each task card
-- FR-3: Include priority selector in task edit modal
-- FR-4: Add priority filter/sort to task list
-
-## Non-Goals
-
-- No priority-based notifications or reminders
-- No automatic priority assignment based on due date
-- No priority inheritance for subtasks
-
-## Technical Considerations
-
-- Reuse existing badge component with color variants
-- Filter state managed via URL search params
-
-## Success Metrics
-
-- Users can change priority in under 2 clicks
-- High-priority tasks immediately visible at top of lists
-
-## Open Questions
-
-- Should we add keyboard shortcuts for priority changes?
 ```
+AskUserQuestion:
+  question: "PRD saved to tasks/prd-<name>.md (<N> stories). What next?"
+  header: "Next step"
+  options:
+    - label: "Convert to stories.json (Recommended)"
+      description: "Run /takt to generate stories.json + scenarios for autonomous execution"
+    - label: "Review PRD first"
+      description: "I'll open the PRD so you can read through it before converting"
+    - label: "Done for now"
+      description: "Keep the PRD, I'll convert it later"
+```
+
+If the user chooses to convert:
+1. Use the `/takt` command
+2. Convert the specified PRD to `stories.json`
+3. After conversion, suggest the appropriate takt mode:
+   - **takt solo** — <=5 stories, mostly linear dependencies
+   - **takt team** — 6+ stories, 2+ independent chains, parallelism pays off
 
 ---
 
@@ -256,42 +238,11 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 Before saving the PRD:
 
 - [ ] Read project CLAUDE.md for context
-- [ ] Asked clarifying questions only where genuinely ambiguous
-- [ ] Incorporated user's answers
+- [ ] Confirmed "why" via AskUserQuestion gate
+- [ ] Confirmed "what" (scope) via AskUserQuestion gate
+- [ ] Confirmed "what not" (exclusions) via AskUserQuestion gate
 - [ ] 3-5 stories with broad scope (not 7-10 tiny ones)
-- [ ] Max 3-4 acceptance criteria per story, no boilerplate
+- [ ] Max 3-4 acceptance criteria per story, all behavioral outcomes
 - [ ] Functional requirements are numbered and unambiguous
-- [ ] Non-goals section defines clear boundaries
+- [ ] Non-goals section populated from confirmed exclusions
 - [ ] Saved to `tasks/prd-[feature-name].md`
-
----
-
-## After Creating PRD(s)
-
-Once you have saved the PRD file(s), present a summary and offer to continue:
-
-```
-✅ PRD(s) created:
-- tasks/prd-feature-name.md (X user stories)
-- tasks/prd-another-feature.md (Y user stories)  [if multiple]
-
-Would you like me to convert the first one to stories.json for takt execution?
-```
-
-If the user says yes:
-1. Use the `/takt` command
-2. Convert the specified PRD to `stories.json`
-
-This creates a smooth handoff from planning to execution.
-
----
-
-## Mode Suggestion
-
-After creating the PRD, suggest the appropriate takt mode:
-
-- **takt solo** — ≤5 stories, mostly linear dependencies, simple feature
-- **takt team** — 6+ stories, 2+ independent chains, parallelism pays off
-- **takt debug** — Bug fixing, strict verification discipline
-
-Include this in your summary after creating the PRD.

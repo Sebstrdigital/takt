@@ -165,13 +165,40 @@ if [ ! -f "$CLAUDE_MD" ] || ! grep -q "takt" "$CLAUDE_MD" 2>/dev/null; then
 
 ## takt - Autonomous Agent Orchestrator
 
-Available globally. Use when a project has `stories.json`. Say these in Claude Code:
-- `takt solo` — run stories sequentially (reads `~/.claude/lib/takt/solo.md`)
-- `takt team` — run stories in parallel (reads `~/.claude/lib/takt/team-lead.md`)
+**Proactive usage — IMPORTANT:**
+When the user discusses a new feature, significant change, or enters plan mode for non-trivial work (likely 3+ stories), **suggest the takt workflow** instead of implementing inline:
+
+1. "This sounds like it could be X stories — want me to create a PRD with `/takt-prd`?"
+2. After PRD approval: convert to `stories.json` + `.takt/scenarios.json` with `/takt`
+3. Execute with `takt solo` (≤5 stories) or `takt team` (6+ stories)
+
+**Plan-mode interception — IMPORTANT:**
+When the user wants to plan a feature (says "plan this", "I want to build X", or you're about to enter plan mode), use **AskUserQuestion** BEFORE entering native plan mode:
+- **takt PRD** — Structured PRD with gated what/why/why-not flow, stories, acceptance criteria, autonomous execution (`/takt-prd`)
+- **Native plan** — Vanilla Claude Code plan mode for simpler or non-story work
+
+If the user picks takt PRD → run `/takt-prd` (which has its own gated flow).
+If the user picks native plan → proceed with standard `EnterPlanMode`.
+
+**When NOT to suggest takt:** Simple tasks (single file change, quick fix, one-liner), pure research/exploration, or when the user explicitly wants to implement directly.
+
+**When the user says "use takt" (or similar) without prior context:**
+If the user mentions takt outside of a planning session (no active PRD, no feature discussion in progress), present the available modes:
+
+> Which takt mode do you want to run?
+> - `takt solo` — Execute stories sequentially (needs `stories.json`)
+> - `takt team` — Execute stories in parallel with multiple agents (needs `stories.json` with waves)
+> - `takt debug` — Bug-fixing discipline (needs bug description or `bugs.json`)
+> - `takt retro` — Retrospective from workbooks (needs `workbook-*.md` files)
+> - `/takt-prd` — Start fresh: create a PRD for a new feature
+
+**Commands:**
+- `takt solo` — run stories sequentially (needs `stories.json`)
+- `takt team` — run stories in parallel (multi-agent)
 - `takt debug` — strict bug-fixing discipline
 - `takt retro` — post-execution retrospective
 - `/takt-prd` — generate PRD from feature description
-- `/takt` — convert PRD to stories.json
+- `/takt` — convert PRD to stories.json + .takt/scenarios.json
 - `/tdd` — TDD workflow
 SECTION
     echo -e "  ${GREEN}added${NC}    takt section"

@@ -1,22 +1,122 @@
-# takt Team Lead — Scrum Master Agent
+# takt Team Mode
+
+This file has two sections. The **session agent** (you) reads "How to Launch". The spawned orchestrator Task follows "Orchestrator Instructions".
+
+---
+
+## How to Launch
+
+You are the session agent. Your job is to launch the team orchestrator as a background Task and monitor its progress. You do NOT orchestrate or write code yourself.
+
+### 1. Read stories.json
+
+```bash
+cat stories.json
+```
+
+Validate it has a `userStories` array and a `waves` field. Print the story matrix:
+
+```
+takt team — <branchName> (<N> stories, <W> waves)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Wave 1:
+  US-001  <title>         pending
+  US-002  <title>         pending
+Wave 2:
+  US-003  <title>         pending  (needs: US-001)
+  US-004  <title>         pending  (needs: US-002)
+```
+
+### 2. Read supporting files
+
+Read all three files and store their contents — you will pass them in the orchestrator prompt:
+
+```bash
+cat ~/.claude/lib/takt/worker.md
+cat ~/.claude/lib/takt/verifier.md
+```
+
+Also read the orchestrator instructions from the section below ("## Orchestrator Instructions" onward in this file).
+
+### 3. Spawn orchestrator Task
+
+Spawn ONE Task with ALL context embedded in the prompt:
+
+- **subagent_type**: `"general-purpose"`
+- **model**: `"sonnet"`
+- **mode**: `"bypassPermissions"`
+- **run_in_background**: `true`
+- **description**: `"takt team — <branchName>"`
+- **prompt**: Compose from:
+  ```
+  # takt Team Lead — Scrum Master Agent
+
+  ## Project Working Directory
+  <absolute path to project root>
+
+  ## stories.json
+  <full contents of stories.json>
+
+  ## Worker Instructions
+  <contents of worker.md>
+
+  ## Verifier Instructions
+  <contents of verifier.md>
+
+  ## Orchestrator Instructions
+  <contents of the "Orchestrator Instructions" section from this file>
+  ```
+
+### 4. Monitor progress
+
+Loop until the orchestrator completes:
+
+1. `TaskOutput(block=true, timeout=30000)` — wait for output
+2. Read `stories.json` to check for status changes
+3. Print one-liner updates as stories/waves complete:
+   ```
+   Wave 1: US-001 completed (4 min)
+   Wave 1: US-002 completed (3 min)
+   Wave 1 merged
+   Wave 2: US-003 completed (5 min)
+   Verification: PASSED
+   ```
+
+### 5. On completion
+
+When the orchestrator finishes (or you see `<promise>COMPLETE</promise>` in its output):
+
+```
+All stories complete. Run `takt retro` to wrap up.
+```
+
+If the orchestrator reports failure, relay the failure summary to the user.
+
+---
+
+## Orchestrator Instructions
 
 You are the scrum master for a takt team execution. You orchestrate parallel story implementation using Claude Code's native team features. **You never write code yourself.**
 
+The stories.json content, worker instructions, and verifier instructions are provided in your prompt above. Do NOT read these files from disk — use the content you were given.
+
 ## Your Job
 
-1. Read `stories.json` — understand stories, waves, and dependencies
+1. Parse stories.json — understand stories, waves, and dependencies
 2. Create a team using TeamCreate
 3. Execute waves sequentially — each wave's stories run in parallel
 4. After each wave completes, merge results and run tests
 5. Handle failures and conflicts
-6. Suggest `takt retro` when all waves are done
+6. Run scenario verification
+7. Output completion signal
 
 ## Startup
 
-1. Read `stories.json` and validate it has a `waves` field
-2. Read any existing `.takt/workbooks/workbook-*.md` files for context from previous runs
-3. Create the team: `TeamCreate` with team name from stories.json project
-4. Create tasks from stories.json stories using TaskCreate
+1. Parse the stories.json content from your prompt
+2. Validate it has a `waves` field
+3. Read any existing `.takt/workbooks/workbook-*.md` files for context from previous runs
+4. Create the team: `TeamCreate` with team name from stories.json project
+5. Create tasks from stories.json stories using TaskCreate
 
 ## Wave Execution
 
@@ -28,7 +128,7 @@ For each story, spawn a Task agent:
 - `model`: `"sonnet"`
 - `mode`: `"bypassPermissions"`
 - `isolation`: `"worktree"`
-- Prompt: Include the story details + worker instructions from `worker.md`
+- Prompt: Include the story details + worker instructions from your prompt
 
 The platform creates and manages the worktree automatically when `isolation: "worktree"` is specified.
 
@@ -71,33 +171,18 @@ The platform handles worktree cleanup automatically when the worker agent exits.
 - Use broadcast ONLY for critical team-wide issues
 - Keep messages concise and actionable
 
-## Completion
-
-When all waves are done:
-1. Run final test suite
-2. Verify stories.json — confirm all completed stories have `passes: true` (each story should already be updated after its merge; fix any that were missed)
-3. The platform handles worktree cleanup automatically as worker agents exit. No manual cleanup is required.
-4. Run scenario verification (see below)
-5. Output: `<promise>COMPLETE</promise>`
-6. Suggest: "Run `takt retro` to generate retrospective and clean up run artifacts."
-
 ## Scenario Verification Phase
 
 After all waves complete and cleanup is done, run scenario verification:
 
 **CRITICAL: NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier. The team lead must remain isolated from scenario data.**
 
-1. Read the verifier instructions:
-   ```bash
-   cat ~/.claude/lib/takt/verifier.md
-   ```
-
-2. Get the recent git changes:
+1. Get the recent git changes:
    ```bash
    git log --oneline -20
    ```
 
-3. Spawn a SINGLE verifier Task agent for all stories:
+2. Spawn a SINGLE verifier Task agent for all stories:
    - **subagent_type**: `"general-purpose"`
    - **model**: `"sonnet"`
    - **mode**: `"bypassPermissions"`
@@ -110,7 +195,7 @@ After all waves complete and cleanup is done, run scenario verification:
      .takt/scenarios.json
 
      ## Verifier Instructions
-     <contents of verifier.md>
+     <contents of verifier.md from your prompt>
 
      ## Recent Changes
      <git log output>
@@ -118,11 +203,11 @@ After all waves complete and cleanup is done, run scenario verification:
      Read .takt/scenarios.json and verify each scenario against the codebase.
      ```
 
-4. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
+3. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
 
    Track a cycle counter starting at 1 (the initial verification above counts as cycle 1).
 
-   **While cycle ≤ 3 and verification is FAILED:**
+   **While cycle <= 3 and verification is FAILED:**
 
    a. Read `bugs.json` from the project root:
       ```bash
@@ -132,6 +217,7 @@ After all waves complete and cleanup is done, run scenario verification:
 
    b. For each bug in bugs.json, spawn a fresh fix worker (Ralph Wiggum pattern — no scenario context):
       - **subagent_type**: `"general-purpose"`
+      - **model**: `"sonnet"`
       - **mode**: `"bypassPermissions"`
       - **run_in_background**: `true`
       - **prompt**:
@@ -160,13 +246,13 @@ After all waves complete and cleanup is done, run scenario verification:
 
    c. Increment the cycle counter.
 
-   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 3 above).
+   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 2 above).
 
-   e. If `VERIFICATION: PASSED` → exit the loop and proceed to Completion.
-      If `VERIFICATION: FAILED` and cycle ≤ 3 → repeat from step (a).
-      If `VERIFICATION: FAILED` and cycle > 3 → exit the loop with failure (see step 5).
+   e. If `VERIFICATION: PASSED` -> exit the loop and proceed to Completion.
+      If `VERIFICATION: FAILED` and cycle <= 3 -> repeat from step (a).
+      If `VERIFICATION: FAILED` and cycle > 3 -> exit the loop with failure (see step 4).
 
-5. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
+4. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
 
    ```
    ## Verification Failure Report
@@ -182,7 +268,21 @@ After all waves complete and cleanup is done, run scenario verification:
 
    Do NOT output `<promise>COMPLETE</promise>`.
 
-6. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to output the completion signal.
+5. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
+
+## Completion
+
+When all waves are done:
+1. Run final test suite
+2. Verify stories.json — confirm all completed stories have `passes: true` (each story should already be updated after its merge; fix any that were missed)
+3. The platform handles worktree cleanup automatically as worker agents exit. No manual cleanup is required.
+4. Commit the final stories.json state:
+   ```bash
+   git add stories.json
+   git commit -m "chore: mark all stories complete in stories.json" --allow-empty
+   ```
+5. Output: `<promise>COMPLETE</promise>`
+6. Suggest: "Run `takt retro` to generate retrospective and clean up run artifacts."
 
 ## Rules
 

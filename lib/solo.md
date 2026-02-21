@@ -1,11 +1,104 @@
-# takt Solo Orchestrator
+# takt Solo Mode
+
+This file has two sections. The **session agent** (you) reads "How to Launch". The spawned orchestrator Task follows "Orchestrator Instructions".
+
+---
+
+## How to Launch
+
+You are the session agent. Your job is to launch the orchestrator as a background Task and monitor its progress. You do NOT orchestrate or write code yourself.
+
+### 1. Read stories.json
+
+```bash
+cat stories.json
+```
+
+Validate it has a `userStories` array. Print the story matrix:
+
+```
+takt solo — <branchName> (<N> stories)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+US-001  <title>         pending
+US-002  <title>         pending  (needs: US-001)
+US-003  <title>         pending
+```
+
+### 2. Read supporting files
+
+Read all three files and store their contents — you will pass them in the orchestrator prompt:
+
+```bash
+cat ~/.claude/lib/takt/worker.md
+cat ~/.claude/lib/takt/verifier.md
+```
+
+Also read the orchestrator instructions from the section below ("## Orchestrator Instructions" onward in this file).
+
+### 3. Spawn orchestrator Task
+
+Spawn ONE Task with ALL context embedded in the prompt:
+
+- **subagent_type**: `"general-purpose"`
+- **model**: `"sonnet"`
+- **mode**: `"bypassPermissions"`
+- **run_in_background**: `true`
+- **description**: `"takt solo — <branchName>"`
+- **prompt**: Compose from:
+  ```
+  # takt Solo Orchestrator
+
+  ## Project Working Directory
+  <absolute path to project root>
+
+  ## stories.json
+  <full contents of stories.json>
+
+  ## Worker Instructions
+  <contents of worker.md>
+
+  ## Verifier Instructions
+  <contents of verifier.md>
+
+  ## Orchestrator Instructions
+  <contents of the "Orchestrator Instructions" section from this file>
+  ```
+
+### 4. Monitor progress
+
+Loop until the orchestrator completes:
+
+1. `TaskOutput(block=true, timeout=30000)` — wait for output
+2. Read `stories.json` to check for status changes
+3. Print one-liner updates as stories complete:
+   ```
+   US-001 completed (4 min)
+   US-003 completed (3 min)
+   Verification: PASSED
+   ```
+
+### 5. On completion
+
+When the orchestrator finishes (or you see `<promise>COMPLETE</promise>` in its output):
+
+```
+All stories complete. Run `takt retro` to wrap up.
+```
+
+If the orchestrator reports failure, relay the failure summary to the user.
+
+---
+
+## Orchestrator Instructions
 
 You are the solo orchestrator for a takt execution. You run ALL stories in `stories.json` sequentially, spawning a fresh worker agent for each story. **You never write code yourself — you only coordinate.**
 
+The stories.json content, worker instructions, and verifier instructions are provided in your prompt above. Do NOT read these files from disk — use the content you were given.
+
 ## Startup
 
-1. Read `stories.json` in the project root
-2. Validate it exists and has a `userStories` array
+1. Parse the stories.json content from your prompt
+2. Validate it has a `userStories` array
 3. Read any existing `workbook-*.md` files in `.takt/workbooks/` for context from previous runs
 4. Create or switch to the feature branch specified in `branchName`:
    ```bash
@@ -49,11 +142,6 @@ jq --arg id "<STORY-ID>" --arg time "$(date +"%Y-%m-%d %H:%M")" \
 
 ### 3. Build Worker Prompt
 
-Read the worker instructions from the installed location:
-```bash
-cat ~/.claude/lib/takt/worker.md
-```
-
 Read the full story object from stories.json:
 ```bash
 jq --arg id "<STORY-ID>" '.userStories[] | select(.id == $id)' stories.json
@@ -74,7 +162,7 @@ Compose the task prompt by combining:
 <list each criterion>
 
 ## Worker Instructions
-<contents of worker.md>
+<contents of worker.md from your prompt>
 
 ## Important Rules for This Execution
 
@@ -165,18 +253,14 @@ If ALL stories pass, run scenario verification:
 
 **CRITICAL: NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier. The orchestrator must remain isolated from scenario data.**
 
-1. Read the verifier instructions:
-   ```bash
-   cat ~/.claude/lib/takt/verifier.md
-   ```
-
-2. Get the recent git changes:
+1. Get the recent git changes:
    ```bash
    git log --oneline -20
    ```
 
-3. Spawn a SINGLE verifier Task agent for all stories:
+2. Spawn a SINGLE verifier Task agent for all stories:
    - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
    - **mode**: `"bypassPermissions"`
    - **run_in_background**: `true`
    - **prompt**:
@@ -187,7 +271,7 @@ If ALL stories pass, run scenario verification:
      .takt/scenarios.json
 
      ## Verifier Instructions
-     <contents of verifier.md>
+     <contents of verifier.md from your prompt>
 
      ## Recent Changes
      <git log output>
@@ -195,11 +279,11 @@ If ALL stories pass, run scenario verification:
      Read .takt/scenarios.json and verify each scenario against the codebase.
      ```
 
-4. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
+3. If verifier reports `VERIFICATION: FAILED`, enter the **verify-fix loop**:
 
    Track a cycle counter starting at 1 (the initial verification above counts as cycle 1).
 
-   **While cycle ≤ 3 and verification is FAILED:**
+   **While cycle <= 3 and verification is FAILED:**
 
    a. Read `bugs.json` from the project root:
       ```bash
@@ -209,6 +293,7 @@ If ALL stories pass, run scenario verification:
 
    b. For each bug in bugs.json, spawn a fresh fix worker (Ralph Wiggum pattern — no scenario context):
       - **subagent_type**: `"general-purpose"`
+      - **model**: `"sonnet"`
       - **mode**: `"bypassPermissions"`
       - **run_in_background**: `true`
       - **prompt**:
@@ -237,13 +322,13 @@ If ALL stories pass, run scenario verification:
 
    c. Increment the cycle counter.
 
-   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 3 above).
+   d. Re-run scenario verification: spawn a fresh verifier Task agent (same prompt structure as step 2 above).
 
-   e. If `VERIFICATION: PASSED` → exit the loop and proceed to Completion.
-      If `VERIFICATION: FAILED` and cycle ≤ 3 → repeat from step (a).
-      If `VERIFICATION: FAILED` and cycle > 3 → exit the loop with failure (see step 5).
+   e. If `VERIFICATION: PASSED` -> exit the loop and proceed to Completion.
+      If `VERIFICATION: FAILED` and cycle <= 3 -> repeat from step (a).
+      If `VERIFICATION: FAILED` and cycle > 3 -> exit the loop with failure (see step 4).
 
-5. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
+4. After 3 failed cycles (cycle counter exceeded 3 with status still FAILED), output a **failure report** and STOP:
 
    ```
    ## Verification Failure Report
@@ -259,7 +344,7 @@ If ALL stories pass, run scenario verification:
 
    Do NOT output `<promise>COMPLETE</promise>`.
 
-6. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
+5. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
 
 ## Completion
 

@@ -35,10 +35,12 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 ### How It Works
 
 1. User says "takt solo" (or team/debug/retro) in Claude Code
-2. Claude Code reads the corresponding prompt from `~/.claude/lib/takt/`
-3. The prompt instructs Claude Code to read `stories.json` and spawn worker agents via Task/TeamCreate
-4. Each worker gets a fresh context (Ralph Wiggum pattern) and implements one story
-5. The orchestrator updates `stories.json` as stories complete
+2. The **session agent** reads the corresponding prompt from `~/.claude/lib/takt/`
+3. The session agent reads `stories.json`, prints a story matrix, and reads supporting files (worker.md, verifier.md)
+4. The session agent spawns ONE **orchestrator Task** (`mode: "bypassPermissions"`, `run_in_background: true`) with all context embedded in the prompt
+5. The orchestrator runs autonomously — zero permission prompts — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
+6. The session agent monitors progress via `TaskOutput` + reading `stories.json`, printing one-liner status updates
+7. The orchestrator updates `stories.json` as stories complete and outputs `<promise>COMPLETE</promise>` when done
 
 ### Key Files (source -> installed)
 - `lib/solo.md` -> `~/.claude/lib/takt/solo.md` - Solo orchestrator prompt
