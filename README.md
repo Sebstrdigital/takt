@@ -123,7 +123,6 @@ graph TD
     style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
     style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style L fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
-    style V fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
 ```
 
 Say in Claude Code:
