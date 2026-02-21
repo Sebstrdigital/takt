@@ -4,6 +4,116 @@ Ideas and risk mitigations to revisit after real-world usage. Don't implement un
 
 ---
 
+## Lights-Out Factory — Gap Report (2026-02-21)
+
+**Vision:** Human sets intent, approves spec, merges final PR. Everything between is autonomous.
+
+### Current State
+
+```
+Human: "Build X"
+  → PRD gates (why/what/what not — human approves)
+  → stories.json + scenarios (human reviews)
+  ━━━━ LIGHTS OUT ━━━━━━━━━━━━━━━━━━━
+  │ Execute (solo/team)              │
+  │ Verify scenarios (up to 3 fixes) │
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  → Human manually creates PR
+  → Human merges
+  → Human runs retro
+```
+
+### Target State
+
+```
+Human: "Build X"
+  → PRD gates (human approves spec)
+  → stories.json (human approves scope)
+  ━━━━ LIGHTS OUT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  │ Execute (solo/team)                          │
+  │ Verify scenarios (behavior — up to 3 fixes)  │
+  │ Review code (quality — up to 2 fixes)        │
+  │ Create PR (structured body + run summary)    │
+  │ Retro (auto-triggered, feeds next run)       │
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  → Human merges PR (or auto-merge if CI green)
+```
+
+### Gaps (in implementation order)
+
+#### Gap 1: Code Review Agent
+
+**What:** Read-only Sonnet agent that reviews the final codebase after scenario verification passes. Checks naming, patterns, duplication, security hygiene, consistency with project conventions (CLAUDE.md). Produces structured review comments.
+
+**Design:**
+- Runs once after verification passes (not per-story — too expensive)
+- Read-only agent, never writes code
+- Output: `review-comments.json` with file, line, severity (must-fix / suggestion), comment
+- Only `must-fix` items trigger a fix loop; suggestions go into PR body as notes
+
+**Open question:** Should this reuse the verify-fix loop pattern (spawn fresh fix workers from review comments) or a simpler single-pass fix agent?
+
+#### Gap 2: Review-Fix Loop
+
+**What:** When the review agent finds must-fix issues, spawn fresh workers to address them. Same Ralph Wiggum pattern — fix workers get review comments (behavioral descriptions of quality issues), not the full review context.
+
+**Design:**
+- Max 2 cycles (review → fix → re-review → fix → final review)
+- If must-fix items remain after 2 cycles, include them in PR body as known issues
+- Suggestions are never fixed automatically — they're informational
+
+#### Gap 3: Automated PR Creation
+
+**What:** After verification + review pass, automatically create a PR using `gh pr create` with a structured body generated from run artifacts.
+
+**PR body structure:**
+- Summary (from PRD intro)
+- Stories completed (from stories.json)
+- Verification results (pass/fail counts, fix cycles needed)
+- Review notes (suggestions from review agent)
+- Run metrics (time, stories, commits)
+- Link to retro if available
+
+**Design:**
+- Orchestrator runs `gh pr create` as final step before completion signal
+- PR targets the base branch (usually `main`)
+- Draft PR if any review suggestions exist; ready PR if clean
+
+#### Gap 4: Auto-Retro
+
+**What:** Retro runs automatically after PR creation instead of requiring the user to say "takt retro". The retro entry is committed to the PR branch so it's included in the PR.
+
+**Design:**
+- Orchestrator spawns retro agent as final step after PR creation
+- Retro agent reads workbooks, generates entry, commits to branch
+- PR body updated with retro summary (or retro is a separate commit on the branch)
+
+#### Gap 5: CI-Aware Merge (optional, furthest out)
+
+**What:** If the project has CI configured, wait for CI to pass on the PR before signaling completion. If CI fails, attempt automated fix (read CI logs → spawn fix worker → push → re-check).
+
+**Design:**
+- Poll `gh pr checks` after PR creation
+- If all checks pass → signal complete (or auto-merge if configured)
+- If checks fail → read failure logs, spawn fix worker, push, re-poll (max 2 attempts)
+- If still failing → flag for human in PR comment
+
+**When to implement:** Only after Gaps 1-4 are stable. CI integration adds external system dependency.
+
+### Implementation Priority
+
+| Gap | Effort | Impact | Priority |
+|-----|--------|--------|----------|
+| 1. Code review agent | Medium | High — quality gate | First |
+| 2. Review-fix loop | Small | High — closes the loop | Second (with #1) |
+| 3. Automated PR | Small | High — removes manual step | Third |
+| 4. Auto-retro | Small | Medium — convenience | Fourth |
+| 5. CI-aware merge | Large | Medium — full automation | Last |
+
+Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story. Gap 5 is its own PRD.
+
+---
+
 ## Orchestrator Redundancy
 
 **Risk:** Scrum master (Opus 4.6) is a single point of failure. Bad decisions cascade.
