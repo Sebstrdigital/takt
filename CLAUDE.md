@@ -23,6 +23,8 @@ Say these phrases in Claude Code (they are not terminal commands):
 - **takt debug** — structured bug-fixing discipline (reads `~/.claude/lib/takt/debug.md`)
 - **takt retro** — generate retrospective from workbooks (reads `~/.claude/lib/takt/retro.md`)
 
+**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/solo.md`, `team-lead.md`, etc.) and follow its "How to Launch" section exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
+
 Slash commands (also in Claude Code):
 - `/takt-prd` — generate a PRD from a feature description
 - `/takt` — convert a PRD into executable `stories.json`
