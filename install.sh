@@ -206,6 +206,13 @@ If the user mentions takt outside of a planning session (no active PRD, no featu
 - `/takt-prd` — generate PRD from feature description
 - `/takt` — convert PRD to stories.json + .takt/scenarios.json
 - `/tdd` — TDD workflow
+
+**CRITICAL — Agent Type Rule:**
+When launching any takt mode (`takt solo`, `takt team`, etc.), you MUST:
+1. Read the corresponding prompt file FIRST (`~/.claude/lib/takt/solo.md`, `team-lead.md`, etc.)
+2. Follow its "How to Launch" section exactly
+3. Use `subagent_type: "general-purpose"` and `model: "sonnet"` for ALL spawned Tasks
+4. NEVER use custom/named agent types (e.g. "Seb the boss", TDD agents, or any other named agent from the Task tool's agent list). The prompt files define the correct configuration — trust them.
 <!-- takt:end -->
 SECTION
 }
