@@ -2,6 +2,7 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-02-22: Add agent type safety rule to install script — survives reinstalls as source of truth
 - 2026-02-22: Add agent type safety rule — enforce `general-purpose` for all takt Task spawns, never custom agents
 - 2026-02-21: Add CHANGELOG.md for permanent improvement tracking
 - 2026-02-21: Add retro retention policy (alerts + last 1 entry only)
