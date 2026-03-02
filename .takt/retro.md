@@ -29,8 +29,8 @@
 - **5 workers, 0 file conflicts**: Despite US-001 and US-002 both touching team-lead.md, the dependency chain (US-002 depends on US-001) prevented conflicts. Wave ordering works.
 
 ### Action Items
-- [ ] Run `./install.sh` to deploy updated prompts (retention policy, git discipline, model defaults) to `~/.claude/`
-- [ ] Clarify solo mode's parallelization behavior in solo.md documentation — either document it as "parallel where possible" or enforce strict sequential
+- [x] Run `./install.sh` to deploy updated prompts (retention policy, git discipline, model defaults) to `~/.claude/` (2026-03-02)
+- [x] Clarify solo mode's parallelization behavior in solo.md documentation — documented as "parallel where possible" (2026-03-02)
 - [ ] Consider splitting stories with 4+ acceptance criteria and 7+ files (like US-005) into smaller units in future PRDs
 
 ### Metrics

@@ -139,9 +139,14 @@ The platform creates and manages the worktree automatically when `isolation: "wo
 - If a worker fails: retry up to 2 times, then mark story as blocked
 
 ### 3. Merge Planning (after all workers in wave report `done`)
-1. Read each worker's `.takt/workbooks/workbook-US-XXX.md`
-2. Identify file overlaps between stories
-3. Plan merge order (least conflicts first)
+1. **Verify workbooks exist** for every story in the wave:
+   ```bash
+   ls .takt/workbooks/workbook-<STORY-ID>.md
+   ```
+   If a workbook is missing, message the worker and request it before proceeding. Do NOT merge a story without its workbook — workbooks are mandatory per worker rules.
+2. Read each worker's `.takt/workbooks/workbook-US-XXX.md`
+3. Identify file overlaps between stories
+4. Plan merge order (least conflicts first)
 
 ### 4. Merge Execution
 For each completed story (one at a time):

@@ -41,7 +41,8 @@ Take a PRD (markdown file or text) and convert it to `stories.json` in the proje
       "verify": "inline",
       "startTime": "",
       "endTime": "",
-      "dependsOn": []
+      "dependsOn": [],
+      "knownIssues": []
     }
   ],
   "waves": []
@@ -273,6 +274,7 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 12. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
 13. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
 14. **Scenario generation**: After writing stories.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
+15. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
 
 ---
 
@@ -522,6 +524,7 @@ Before writing stories.json, verify:
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
 - [ ] **waves** computed if 6+ stories with independent chains
 - [ ] **scenarios.json** generated at `.takt/scenarios.json` with 2-5 BDD scenarios per story
+- [ ] **knownIssues** populated for stories affected by pre-existing failures (empty array if none)
 
 ---
 

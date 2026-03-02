@@ -91,7 +91,9 @@ If the orchestrator reports failure, relay the failure summary to the user.
 
 ## Orchestrator Instructions
 
-You are the solo orchestrator for a takt execution. You run ALL stories in `stories.json` sequentially, spawning a fresh worker agent for each story. **You never write code yourself — you only coordinate.**
+You are the solo orchestrator for a takt execution. You process ALL stories in `stories.json`, spawning a fresh worker agent for each story. **You never write code yourself — you only coordinate.**
+
+**Execution order:** Stories run in priority order. Stories with no unmet `dependsOn` can be started in parallel — solo mode optimizes throughput by running independent stories concurrently when possible, then waits for all to complete before starting dependent stories. This is intentional: "solo" means one orchestrator (no TeamCreate), not necessarily sequential execution.
 
 The stories.json content, worker instructions, and verifier instructions are provided in your prompt above. Do NOT read these files from disk — use the content you were given.
 

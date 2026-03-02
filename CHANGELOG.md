@@ -2,6 +2,9 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-03-02: Add `knownIssues` field to stories.json schema — workers skip pre-existing failures instead of wasting time diagnosing them
+- 2026-03-02: Enforce workbook verification in team-lead.md merge planning — team lead must confirm workbook exists before merging
+- 2026-03-02: Document solo mode parallel execution behavior — clarify that independent stories run concurrently
 - 2026-02-22: Add agent type safety rule to install script — survives reinstalls as source of truth
 - 2026-02-22: Add agent type safety rule — enforce `general-purpose` for all takt Task spawns, never custom agents
 - 2026-02-21: Add CHANGELOG.md for permanent improvement tracking
