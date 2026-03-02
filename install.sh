@@ -57,27 +57,21 @@ check_and_install() {
     local prefixed_target="$target_dir/$prefixed_name"
 
     if [ -f "$target" ] && grep -q "source_id: $SOURCE_ID" "$target" 2>/dev/null; then
-        local target_version
-        target_version="$(get_version "$target")"
-
-        if [ "$src_version" = "$target_version" ]; then
-            echo -e "  ${GRAY}current${NC}  $filename ${GRAY}(v$target_version)${NC}"
+        if diff -q "$src" "$target" >/dev/null 2>&1; then
+            echo -e "  ${GRAY}current${NC}  $filename ${GRAY}(v$src_version)${NC}"
             skipped=$((skipped + 1))
         else
             cp "$src" "$target"
-            echo -e "  ${BLUE}updated${NC}  $filename ${GRAY}v$target_version -> v$src_version${NC}"
+            echo -e "  ${BLUE}updated${NC}  $filename ${GRAY}(v$src_version)${NC}"
             updated=$((updated + 1))
         fi
     elif [ -f "$prefixed_target" ] && grep -q "source_id: $SOURCE_ID" "$prefixed_target" 2>/dev/null; then
-        local target_version
-        target_version="$(get_version "$prefixed_target")"
-
-        if [ "$src_version" = "$target_version" ]; then
-            echo -e "  ${GRAY}current${NC}  $prefixed_name ${GRAY}(v$target_version)${NC}"
+        if diff -q "$src" "$prefixed_target" >/dev/null 2>&1; then
+            echo -e "  ${GRAY}current${NC}  $prefixed_name ${GRAY}(v$src_version)${NC}"
             skipped=$((skipped + 1))
         else
             cp "$src" "$prefixed_target"
-            echo -e "  ${BLUE}updated${NC}  $prefixed_name ${GRAY}v$target_version -> v$src_version${NC}"
+            echo -e "  ${BLUE}updated${NC}  $prefixed_name ${GRAY}(v$src_version)${NC}"
             updated=$((updated + 1))
         fi
     elif [ -f "$target" ]; then
