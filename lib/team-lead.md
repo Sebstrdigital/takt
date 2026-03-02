@@ -29,11 +29,12 @@ Wave 2:
 
 ### 2. Read supporting files
 
-Read all three files and store their contents — you will pass them in the orchestrator prompt:
+Read all four files and store their contents — you will pass them in the orchestrator prompt:
 
 ```bash
 cat ~/.claude/lib/takt/worker.md
 cat ~/.claude/lib/takt/verifier.md
+cat ~/.claude/lib/takt/reviewer.md
 ```
 
 Also read the orchestrator instructions from the section below ("## Orchestrator Instructions" onward in this file).
@@ -62,6 +63,9 @@ Spawn ONE Task with ALL context embedded in the prompt:
 
   ## Verifier Instructions
   <contents of verifier.md>
+
+  ## Reviewer Instructions
+  <contents of reviewer.md>
 
   ## Orchestrator Instructions
   <contents of the "Orchestrator Instructions" section from this file>
@@ -98,7 +102,7 @@ If the orchestrator reports failure, relay the failure summary to the user.
 
 You are the scrum master for a takt team execution. You orchestrate parallel story implementation using Claude Code's native team features. **You never write code yourself.**
 
-The stories.json content, worker instructions, and verifier instructions are provided in your prompt above. Do NOT read these files from disk — use the content you were given.
+The stories.json content, worker instructions, verifier instructions, and reviewer instructions are provided in your prompt above. Do NOT read these files from disk — use the content you were given.
 
 ## Your Job
 
@@ -273,7 +277,108 @@ After all waves complete and cleanup is done, run scenario verification:
 
    Do NOT output `<promise>COMPLETE</promise>`.
 
-5. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to Completion.
+5. If verifier reports `VERIFICATION: PASSED` (either on the first run or after a fix cycle), proceed to the Code Review Phase.
+
+## Code Review Phase
+
+After scenario verification passes, run a code review before proceeding to completion.
+
+**CRITICAL: The reviewer agent is completely isolated — it receives only the diff and CLAUDE.md, never story instructions or scenario data.**
+
+1. Get the feature branch diff:
+   ```bash
+   git diff main...HEAD
+   ```
+
+2. Read the project's CLAUDE.md:
+   ```bash
+   cat CLAUDE.md
+   ```
+
+3. Spawn a SINGLE reviewer Task agent:
+   - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
+   - **mode**: `"bypassPermissions"`
+   - **run_in_background**: `true`
+   - **prompt**:
+     ```
+     # Code Review
+
+     ## Project Working Directory
+     <absolute path to project root>
+
+     ## CLAUDE.md Contents
+     <contents of CLAUDE.md>
+
+     ## Feature Branch Diff
+     <output of git diff main...HEAD>
+
+     ## Reviewer Instructions
+     <contents of reviewer.md from your prompt>
+
+     Review the diff against the project conventions and general code quality. Write review-comments.json to the project root.
+     ```
+
+4. After the reviewer completes, read `review-comments.json`:
+   ```bash
+   cat review-comments.json
+   ```
+
+5. Count must-fix items:
+   - If zero must-fix items → proceed to Completion
+   - If one or more must-fix items → enter the **review-fix loop**
+
+### Review-Fix Loop
+
+Track a review cycle counter starting at 1 (the initial review above counts as cycle 1). **Max 2 cycles.**
+
+**While cycle <= 2 and must-fix items remain:**
+
+a. For each must-fix comment in `review-comments.json`, spawn a fresh fix worker (Ralph Wiggum pattern — receives only the comment text):
+   - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
+   - **mode**: `"bypassPermissions"`
+   - **run_in_background**: `true`
+   - **prompt**:
+     ```
+     # Code Review Fix: <file>:<line>
+
+     ## Project Working Directory
+     <absolute path to project root>
+
+     ## Issue to Fix
+     <comment text from review-comments.json>
+
+     ## Instructions
+     Investigate the codebase and fix the described issue. Do not ask for clarification.
+     Commit your fix with message: fix: review - <short description>
+     Use absolute paths everywhere. Do NOT modify stories.json.
+     ```
+
+   Wait for all fix workers to complete before proceeding.
+
+b. Increment the cycle counter.
+
+c. Re-run the reviewer: spawn a fresh reviewer Task agent (same prompt structure as step 3 above, with an updated diff).
+
+d. Read the new `review-comments.json` and count must-fix items.
+
+e. If zero must-fix items → exit the loop and proceed to Completion.
+   If must-fix items remain and cycle <= 2 → repeat from step (a).
+   If must-fix items remain and cycle > 2 → exit the loop and proceed to Completion with known issues.
+
+### Review Phase Completion
+
+After the review-fix loop:
+- If **no must-fix items remain**: proceed to Completion normally.
+- If **must-fix items still remain after 2 cycles**: include them in the completion output and proceed (do NOT block completion):
+  ```
+  ## Code Review — Known Issues (unresolved after 2 fix cycles)
+
+  <for each remaining must-fix comment: file:line — comment text>
+
+  These issues were not automatically resolved. Manual review recommended.
+  ```
 
 ## Completion
 
