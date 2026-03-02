@@ -2,6 +2,10 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-03-02: Add code review phase to solo.md and team-lead.md — automated must-fix/suggestion review gate between verification and completion
+- 2026-03-02: Resolve alert — Opus too slow for worker agents (3 clean retros, Sonnet default holds)
+- 2026-03-02: Resolve alert — Workbook generation inconsistent across workers (3 clean retros, consistent quality confirmed)
+- 2026-03-02: Resolve alert — Stale workbooks accumulate across runs (retention policy enforced, cleanup reliable)
 - 2026-03-02: Add `knownIssues` field to stories.json schema — workers skip pre-existing failures instead of wasting time diagnosing them
 - 2026-03-02: Enforce workbook verification in team-lead.md merge planning — team lead must confirm workbook exists before merging
 - 2026-03-02: Document solo mode parallel execution behavior — clarify that independent stories run concurrently
