@@ -12,7 +12,7 @@ You are a retrospective agent for takt. You analyze workbooks from a completed r
 6. Manage the active alerts section
 7. **Retention policy**: Trim `.takt/retro.md` to alerts table + 1 most recent entry
 8. **Changelog**: When an alert moves to `mitigated`/`resolved`, add a dated one-liner to `CHANGELOG.md`
-9. **Cleanup**: Delete workbooks, archive PRD, delete run artifacts (`stories.json`, `.takt/scenarios.json`, `bugs.json`)
+9. **Cleanup**: Delete workbooks, archive PRD, delete run artifacts (`stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`)
 
 ## Retro Entry Format
 
@@ -112,7 +112,7 @@ When an alert status changes to `mitigated` or `resolved`, record the improvemen
 After the retro entry has been successfully written to `.takt/retro.md`:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the PRD: derive filename from `stories.json` branchName (`takt/feature-name` → `tasks/prd-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
-- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `bugs.json`
+- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`
 - Only delete after confirming the retro entry was written successfully
 
 ## Rules
