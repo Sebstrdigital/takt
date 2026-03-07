@@ -67,10 +67,10 @@ graph TD
 
 1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd` with gated checkpoints (Why > What > What Not > Review).
 2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into two files: `stories.json` (visible to workers) and `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier).
-3. **Execute** — Say "start takt". The session agent reads `run.md`, auto-detects sequential vs parallel mode from the `waves` field, and orchestrates directly — spawning fresh worker agents for each story.
+3. **Execute** — Say "start takt". The session agent reads `run.md`, auto-detects sequential vs parallel mode from the `waves` field, prints a start line with an ETA (based on per-project timing stats), and orchestrates silently — spawning fresh worker agents for each story. No intermediate output until the final report.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
 5. **Review** — A code reviewer reads the feature branch diff (`.takt/review.diff`) and produces structured feedback. Must-fix issues trigger automated fix workers. Up to 2 review-fix cycles.
-6. **Ship** — PR is created automatically, retro agent processes workbooks and updates `.takt/retro.md` and `CHANGELOG.md`.
+6. **Ship** — PR is created automatically, retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
 
 ## Information Isolation
 
@@ -188,12 +188,13 @@ Triggered automatically after each run completes. The value of retros compounds 
 
 | File | Purpose | Created by | Visible to |
 |------|---------|------------|------------|
-| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review | Session agent, workers |
+| `stories.json` | Stories, waves, dependencies, verification modes (ephemeral, never committed) | `/takt` command + human review | Session agent, workers |
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
 | `.takt/review.diff` | Unified diff for code review (ephemeral) | Session agent | Reviewer only |
 | `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Session agent, fix workers |
 | `review-comments.json` | Structured review feedback | Reviewer agent | Session agent |
 | `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Session agent |
+| `.takt/stats.json` | Per-project timing stats for ETA estimation (persistent) | Retro agent | Session agent |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent | Human |
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command | Human |
 | `tasks/archive/` | Completed PRDs, auto-archived on finish | Session agent | Human |

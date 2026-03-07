@@ -10,8 +10,9 @@ There is no bash script or CLI binary. The user says "start takt" in Claude Code
 
 Each mode spawns fresh Claude Code agent instances. Memory persists via:
 - **Git history** - commits from previous iterations
-- **stories.json** - tracks which stories are `passes: true/false`
+- **stories.json** - tracks which stories are `passes: true/false` (ephemeral, never committed)
 - **.takt/workbooks/workbook-US-XXX.md** - per-story implementation notes (ephemeral)
+- **.takt/stats.json** - per-project timing stats for ETA estimation (persistent)
 - **.takt/retro.md** - retrospective entries and active alerts
 
 ## Usage
@@ -55,11 +56,11 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 
 1. User says "start takt" in Claude Code
 2. The **session agent** reads `~/.claude/lib/takt/run.md`
-3. The session agent reads `stories.json`, detects mode (sequential vs parallel from waves), prints a story matrix
-4. The session agent orchestrates directly — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
+3. The session agent reads `stories.json`, detects mode (sequential vs parallel from waves), estimates duration from `.takt/stats.json`, prints a single start line with ETA
+4. The session agent orchestrates silently — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
 5. Workers run autonomously with `mode: "bypassPermissions"` and `run_in_background: true`
-6. The session agent monitors progress via `TaskOutput` + reading `stories.json`, printing one-liner status updates
-7. Stories are updated in `stories.json` as they complete
+6. No intermediate output — the orchestrator works silently until all phases complete
+7. Final report: stories passed, PR URL, retro summary, total duration
 
 ### Key Files (source -> installed)
 - `lib/run.md` -> `~/.claude/lib/takt/run.md` - Unified orchestrator prompt (replaces solo.md + team-lead.md)
@@ -70,8 +71,9 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `commands/*.md` -> `~/.claude/commands/` - Slash commands
 
 ### Artifacts
-- `stories.json` — project root, tracks stories and their status
+- `stories.json` — project root, tracks stories and their status (ephemeral, never committed, deleted by retro)
 - `.takt/workbooks/workbook-US-XXX.md` — ephemeral per-story notes, deleted after retro
+- `.takt/stats.json` — per-project timing stats for ETA estimation (persistent across runs)
 - `.takt/retro.md` — persistent retrospective entries and alerts
 
 ### Slash Commands
