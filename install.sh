@@ -213,15 +213,10 @@ SECTION
 }
 
 if grep -q "$TAKT_SECTION_START" "$CLAUDE_MD" 2>/dev/null; then
-    # Existing tagged section — replace it
-    new_section="$(generate_takt_section)"
-    # Use awk to replace between markers (inclusive)
-    awk -v start="$TAKT_SECTION_START" -v end="$TAKT_SECTION_END" -v replacement="$new_section" '
-        $0 ~ start { printing=0; printf "%s\n", replacement; next }
-        $0 ~ end { printing=1; next }
-        printing!=0 { print }
-        BEGIN { printing=1 }
-    ' "$CLAUDE_MD" > "$CLAUDE_MD.tmp" && mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
+    # Existing tagged section — remove old, append new
+    sed -n "/$TAKT_SECTION_START/,/$TAKT_SECTION_END/!p" "$CLAUDE_MD" > "$CLAUDE_MD.tmp"
+    mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
+    generate_takt_section >> "$CLAUDE_MD"
     echo -e "  ${BLUE}updated${NC}  takt section"
     updated=$((updated + 1))
 elif grep -q "## takt" "$CLAUDE_MD" 2>/dev/null; then

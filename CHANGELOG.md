@@ -2,6 +2,7 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-03-07: Fix install.sh CLAUDE.md replacement — awk multi-line string bug silently skipped section updates, replaced with sed+append
 - 2026-03-07: Add silent execution — orchestrator prints only start line (with ETA) and final report, no intermediate output
 - 2026-03-07: Add per-project timing stats (.takt/stats.json) — retro computes per-size averages and phase overhead, orchestrator uses them for ETA
 - 2026-03-07: Fix stories.json lifecycle — never committed, treated as ephemeral run artifact deleted by retro
