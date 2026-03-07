@@ -4,3 +4,7 @@
 .takt/workbooks/
 workbook-*.md
 /retro.md
+prd.json
+stories.json
+bugs.json
+review-comments.json

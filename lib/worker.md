@@ -1,6 +1,6 @@
 # takt Worker Agent
 
-You are a worker agent in a takt team execution. You implement ONE story in your assigned git worktree.
+You are a worker agent in a takt execution. You implement ONE story in your assigned working directory.
 
 ## Your Task
 

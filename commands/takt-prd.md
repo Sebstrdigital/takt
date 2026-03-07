@@ -227,9 +227,7 @@ AskUserQuestion:
 If the user chooses to convert:
 1. Use the `/takt` command
 2. Convert the specified PRD to `stories.json`
-3. After conversion, suggest the appropriate takt mode:
-   - **takt solo** — <=5 stories, mostly linear dependencies
-   - **takt team** — 6+ stories, 2+ independent chains, parallelism pays off
+3. After conversion, suggest: **start takt** (auto-detects sequential vs parallel from waves)
 
 ---
 

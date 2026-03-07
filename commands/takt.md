@@ -1,6 +1,6 @@
 ---
 name: takt
-description: "Convert PRDs to stories.json format for the takt autonomous agent system. This command is for PRD-to-stories conversion ONLY. It does NOT handle retro, solo, team, or debug — those are triggered by saying 'takt solo', 'takt team', 'takt debug', or 'takt retro' directly in Claude Code, which reads the corresponding prompt file. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
+description: "Convert PRDs to stories.json format for the takt autonomous agent system. This command is for PRD-to-stories conversion ONLY. It does NOT handle run, debug, or retro — those are triggered by saying 'start takt', 'takt debug', or 'takt retro' directly in Claude Code, which reads the corresponding prompt file. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
 source_id: takt
 version: 1.0.0
 ---
@@ -80,7 +80,7 @@ This keeps verification thorough where it matters without burning tokens on simp
 
 ## Wave Planning (Team Mode)
 
-When the PRD has 6+ stories with 2+ independent dependency chains, add wave planning for `takt team` mode.
+When the PRD has 6+ stories with 2+ independent dependency chains, add wave planning for parallel execution.
 
 ### dependsOn Field
 
@@ -118,9 +118,9 @@ Add a top-level `waves` array computed from `dependsOn`:
 ### When to Add Waves
 
 - **Add waves** when: 6+ stories, 2+ independent chains, parallelism benefits
-- **Skip waves** when: ≤5 stories, linear dependencies, simple feature → use `takt solo`
+- **Skip waves** when: ≤5 stories, linear dependencies, simple feature
 
-Include a note after the summary: "If waves are present, suggest `takt team` over `takt solo`."
+`start takt` auto-detects sequential vs parallel from the presence of waves.
 
 ---
 
@@ -465,7 +465,7 @@ Store at `.takt/scenarios.json`. Create the `.takt/` directory if it does not ex
 4. **Not copy-pasted acceptance criteria** — acceptance criteria tell the worker what to build; scenarios test whether it actually works from a QA perspective. Reframe, don't copy.
 5. **type field** — use `"behavioral"` for user-facing outcomes, `"contract"` for API/data contract checks, `"edge"` for boundary/error conditions.
 6. **IDs are globally unique** — SC-001, SC-002, etc. across the entire file (not per story).
-7. **Hidden from workers** — `.takt/` is gitignored and not referenced by solo.md or worker.md. Only `verifier.md` reads this file.
+7. **Hidden from workers** — `.takt/` is gitignored and not referenced by run.md or worker.md. Only `verifier.md` reads this file.
 
 ### Scenario Writing Guide
 

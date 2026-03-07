@@ -28,7 +28,7 @@
 
 ### Action Items
 - [ ] Run `./install.sh` to deploy run.md and updated prompts to `~/.claude/lib/takt/`
-- [ ] Delete `lib/solo.md` and `lib/team-lead.md` from the repo (run.md replaces them)
+- [x] Delete `lib/solo.md` and `lib/team-lead.md` from the repo (run.md replaces them)
 - [ ] Verify `start takt` end-to-end on a real project to confirm the unified orchestration works
 
 ### Metrics
