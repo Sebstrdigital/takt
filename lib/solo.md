@@ -85,8 +85,12 @@ Loop until the orchestrator completes:
 
 When the orchestrator finishes (or you see `<promise>COMPLETE</promise>` in its output):
 
+Report the PR URL and retro summary from the orchestrator's output to the user. Example:
+
 ```
-All stories complete. Run `takt retro` to wrap up.
+All stories complete. PR created and retro committed.
+PR: <PR_URL>
+Retro: <one-line retro summary>
 ```
 
 If the orchestrator reports failure, relay the failure summary to the user.
@@ -507,6 +511,42 @@ After the code review phase, automatically create a pull request if the `gh` CLI
 
 6. Capture the PR URL from stdout for use in the Completion phase.
 
+## Auto-Retro Phase
+
+After PR creation (or if PR creation was skipped), automatically run a retrospective.
+
+1. Spawn a retro agent Task:
+   - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
+   - **mode**: `"bypassPermissions"`
+   - **run_in_background**: `true`
+   - **prompt**:
+     ```
+     # Auto-Retro
+
+     ## Project Working Directory
+     <absolute path to project root>
+
+     ## Branch
+     <branchName>
+
+     ## Instructions
+     Read `~/.claude/lib/takt/retro.md` for the full retro agent instructions and follow them.
+
+     Specifically:
+     1. Read all workbooks from `.takt/workbooks/`
+     2. Generate a retro entry in `.takt/retro.md`
+     3. Update `CHANGELOG.md` if needed
+     4. Clean up workbooks (delete processed workbook files)
+     5. Commit and push all retro changes to the current branch
+
+     When complete, output a one-line summary of the retro findings.
+     ```
+
+2. Wait for the retro agent to complete via `TaskOutput`.
+
+3. Capture the one-line retro summary from the agent's output.
+
 ## Completion
 
 After all stories pass (including deep verification):
@@ -529,15 +569,15 @@ After all stories pass (including deep verification):
    <promise>COMPLETE</promise>
    ```
 
-4. Print the PR URL if one was created:
+4. Print the PR URL and retro summary:
    ```
    PR created: <PR_URL>
+   Retro: <one-line retro summary>
    ```
 
-5. Suggest next steps:
+5. Final status:
    ```
-   All stories complete. Suggested next steps:
-   - Run `takt retro` to generate retrospective and clean up run artifacts
+   All stories complete. PR created and retro committed.
    ```
 
 ## Rules
