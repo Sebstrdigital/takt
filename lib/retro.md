@@ -12,7 +12,8 @@ You are a retrospective agent for takt. You analyze workbooks from a completed r
 6. Manage the active alerts section
 7. **Retention policy**: Trim `.takt/retro.md` to alerts table + 1 most recent entry
 8. **Changelog**: When an alert moves to `mitigated`/`resolved`, add a dated one-liner to `CHANGELOG.md`
-9. **Cleanup**: Delete workbooks, archive PRD, delete run artifacts (`stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`)
+9. **Timing stats**: Compute per-story durations and phase overhead, update `.takt/stats.json`
+10. **Cleanup**: Delete workbooks, archive PRD, delete run artifacts (`stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`) — but NOT `.takt/stats.json`
 
 ## Retro Entry Format
 
@@ -41,6 +42,8 @@ Append a new entry to `.takt/retro.md`:
 - Stories completed: X/Y
 - Stories blocked: Z
 - Total workbooks: N
+- Avg story duration: Xs (small), Ys (medium), Zs (large)
+- Phase overhead: Xs (verification + review)
 ```
 
 ## Active Alerts
@@ -126,11 +129,46 @@ When an alert status changes to `mitigated` or `resolved`, record the improvemen
   ```
 - Only add a changelog entry when a concrete improvement was applied — not for every retro run
 
-### 7. Cleanup
-After the retro entry has been successfully written to `.takt/retro.md`:
+### 7. Update Timing Stats
+
+Compute per-story durations from `startTime`/`endTime` in `stories.json` and update `.takt/stats.json`.
+
+**Step 1 — Record retro start time**: Note the current UTC timestamp when you begin. This is used for overhead calculation.
+
+**Step 2 — Story durations**: For each completed story in `stories.json`, calculate `endTime - startTime` in seconds. Group by the story's `size` field ("small"/"medium"/"large").
+
+**Step 3 — Overhead**: Calculate `overhead = retro_start_time - last_story_endTime` (the latest `endTime` across all stories). This captures the combined time spent on verification + review phases. Do not count retro duration — it runs after the user-facing work is done.
+
+**Step 4 — Update `.takt/stats.json`**: Read the existing file (or start fresh if missing). For each size tier with new data, update using a running average:
+```
+new_avg = ((old_avg * old_count) + sum_of_new_durations) / (old_count + new_count)
+new_fastest = min(old_fastest, new_fastest)
+new_slowest = max(old_slowest, new_slowest)
+new_count = old_count + new_count
+```
+Update overhead the same way (single running average). Increment `runs` count. Set `updatedAt`.
+
+**Schema** for `.takt/stats.json`:
+```json
+{
+  "runs": 1,
+  "stories": {
+    "bySize": {
+      "small": { "count": 3, "fastest": 65, "slowest": 210, "avg": 120 },
+      "medium": { "count": 2, "fastest": 120, "slowest": 360, "avg": 195 }
+    }
+  },
+  "overhead": { "avg": 340, "count": 1 },
+  "updatedAt": "2026-03-07T14:00:00Z"
+}
+```
+
+### 8. Cleanup
+After the retro entry and stats update have been completed:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the PRD: derive filename from `stories.json` branchName (`takt/feature-name` → `tasks/prd-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
 - Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
+- Do NOT delete `.takt/stats.json` — it persists across runs
 - Only delete after confirming the retro entry was written successfully
 
 ## Rules

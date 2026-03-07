@@ -15,14 +15,12 @@ You are the session agent running a takt execution. You read stories.json, spawn
 3. **Detect mode** from the `waves` field:
    - **Sequential** — `waves` is empty, missing, or every wave contains exactly 1 story
    - **Parallel** — any wave contains 2+ stories
-4. Print the story matrix:
+4. **Estimate duration** — read `.takt/stats.json` if it exists. For each story, look up its `size` ("small"/"medium"/"large") in `stats.json.stories.bySize` and use the `avg` seconds. Add overhead from `stats.json.overhead.avg`. If no stats file exists, use defaults: small=120s, medium=180s, large=300s, overhead=480s. Format as a range: `estimate × 0.8` to `estimate × 1.3`, rounded to nearest 5 minutes.
+5. Print the start line and nothing else:
    ```
-   takt run — <branchName> (<N> stories, <mode>)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   US-001  <title>         pending
-   US-002  <title>         pending  (needs: US-001)
+   takt started — <branchName> (<N> stories, <mode>, ~15-25 min)
    ```
-   In parallel mode, group by wave.
+   Do NOT print a story matrix, phase headers, or any other output until the final report.
 
 ---
 
@@ -209,17 +207,17 @@ Wait for completion. Capture the one-line retro summary.
 
 ## Phase 7: Completion
 
-1. Commit final stories.json:
-   ```bash
-   git add stories.json
-   git commit -m "chore: mark all stories complete in stories.json" --allow-empty
+1. Calculate total duration from first story's `startTime` to now.
+2. Print the final report (the ONLY output after the start line):
    ```
-2. Report to user:
+   takt complete — <branchName>
+   - Stories: X/Y passed [Z blocked]
+   - PR: <URL or "skipped">
+   - Retro: <one-line summary>
+   - Duration: N min
    ```
-   All stories complete. PR created and retro committed.
-   PR: <PR_URL>
-   Retro: <one-line summary>
-   ```
+
+Note: `stories.json` is a temporary run artifact. The retro agent reads it for timing stats, then deletes it during cleanup. Do not commit it.
 
 ---
 
@@ -233,4 +231,34 @@ Wait for completion. Capture the one-line retro summary.
 6. **Respect priority and deps** — lowest priority number first, skip unmet deps
 7. **Max retries** — 1 for stories, 3 cycles for verification, 2 cycles for review
 8. **Absolute paths only** — never `cd`, never relative paths
-9. **Log progress** — print one-liner status after each story completes
+9. **Silent execution** — see Output Discipline below
+
+---
+
+## Output Discipline
+
+**Print exactly two things. Nothing else.**
+
+### 1. Start line (Phase 1)
+```
+takt started — <branchName> (<N> stories, <mode>, ~15-25 min)
+```
+
+### 2. Final report (Phase 7)
+```
+takt complete — <branchName>
+- Stories: 5/5 passed
+- PR: <URL or "skipped">
+- Retro: <one-line summary>
+- Duration: 18 min
+```
+
+### What NOT to print
+- No story matrix
+- No phase headers or transitions
+- No "spawning worker", "waiting for completion", "let me review"
+- No diff commentary or analysis
+- No intermediate status updates
+- No narration of your actions whatsoever
+
+You are a background process. Work silently. Report when done.
