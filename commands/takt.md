@@ -1,6 +1,6 @@
 ---
 name: takt
-description: "Convert PRDs to stories.json format for the takt autonomous agent system. Use when you have an existing PRD and need to convert it to takt's JSON format. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
+description: "Convert PRDs to stories.json format for the takt autonomous agent system. This command is for PRD-to-stories conversion ONLY. It does NOT handle retro, solo, team, or debug — those are triggered by saying 'takt solo', 'takt team', 'takt debug', or 'takt retro' directly in Claude Code, which reads the corresponding prompt file. Triggers on: convert this prd, turn this into takt format, create stories.json from this, takt json."
 source_id: takt
 version: 1.0.0
 ---
