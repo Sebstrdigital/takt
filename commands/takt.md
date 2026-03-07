@@ -124,37 +124,19 @@ Include a note after the summary: "If waves are present, suggest `takt team` ove
 
 ---
 
-## Story Type: Logic vs UI
+## Story Type: Categorization
 
-Each story has a `type` field controlling the implementation workflow.
+Each story has a `type` field for categorization. All types use **direct implementation** — workers implement the code that satisfies acceptance criteria without a TDD workflow. BDD scenarios (in `.takt/scenarios.json`) are the quality gate, verified by a separate verifier agent.
 
 **Values:** `"logic"`, `"ui"`, `"hybrid"`
 
-| Type | Workflow | Verification |
-|------|----------|--------------|
-| `logic` | **TDD:** Write failing tests FIRST, then implement, then refactor | Tests must pass |
-| `ui` | **Build-only:** Implement directly, verify with `npm run build` | Build passes |
-| `hybrid` | **Mixed:** TDD for logic parts, direct implementation for UI | Tests + build |
+| Type | Description | Examples |
+|------|-------------|---------|
+| `logic` | Backend, data, business rules | Database migrations, API endpoints, parsers, state management |
+| `ui` | Pure visual/layout work | Component layouts, styling, modal structure, navigation UI |
+| `hybrid` | Both logic and UI | Form with validation, table with sorting, interactive components |
 
-**Default to `"logic"`** for stories that involve:
-- Database migrations and schema changes
-- API endpoints and server actions
-- Parsers, generators, utility functions
-- State management hooks
-- Business logic
-
-**Assign `"ui"` for stories that are pure UI:**
-- React component layouts
-- Form rendering (not validation logic)
-- Styling and visual changes
-- Modal/dialog structure
-- Tab navigation UI
-
-**Assign `"hybrid"` for stories with both:**
-- Form component with validation logic (UI + validation tests)
-- Table component with sorting logic (UI + sorting tests)
-
-**Why this matters:** TDD adds significant overhead. Writing tests for "does this button render" provides no value. Reserve TDD for code where tests catch real bugs.
+**Default to `"logic"`** when uncertain. The type field helps the converter and verifier understand the nature of the story but does not change the worker's implementation approach — all types use direct implementation.
 
 ---
 
@@ -267,7 +249,7 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 4. **All stories**: `passes: false`
 5. **branchName**: Derive from PRD filename, kebab-case, prefixed with `takt/` (e.g., `prd-dark-mode.md` → `takt/dark-mode`)
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
-7. **Type assignment**: Assign `"logic"` (TDD), `"ui"` (build-only), or `"hybrid"` based on story content (see Story Type section)
+7. **Type assignment**: Assign `"logic"`, `"ui"`, or `"hybrid"` based on story content (see Story Type section)
 8. **Verify assignment**: Set `"verify": "deep"` for the final story, complex stories, and security-sensitive stories; otherwise `"verify": "inline"`
 10. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
 11. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
@@ -402,7 +384,7 @@ Add ability to mark tasks with different statuses.
 ```
 
 Note:
-- **Type assignments:** US-001 is `"logic"` (database), US-002/US-004 are `"ui"` (visual), US-003 is `"hybrid"` (UI + save logic)
+- **Type assignments:** US-001 is `"logic"` (database), US-002/US-004 are `"ui"` (visual), US-003 is `"hybrid"` (UI + save logic). All types use direct implementation; BDD scenarios are the verification layer.
 - US-004 has `"verify": "deep"` because it's the **final story** — gets independent verification before completion
 - Size assignments: US-001, US-002 are `"small"` (single concern), US-003, US-004 are `"medium"` (multiple files/logic)
 
@@ -517,7 +499,7 @@ Before writing stories.json, verify:
 - [ ] UI stories have "Verify in browser using Chrome integration" as criterion (optional if Chrome disabled)
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story
-- [ ] **Type assigned** to each story (`"logic"` for TDD, `"ui"` for build-only, `"hybrid"` for mixed)
+- [ ] **Type assigned** to each story (`"logic"`, `"ui"`, or `"hybrid"` for categorization)
 - [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for final story and complex/security stories)
 - [ ] **Size assigned** to each story (`"small"`, `"medium"`, or `"large"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
