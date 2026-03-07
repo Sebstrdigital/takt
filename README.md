@@ -27,6 +27,7 @@ graph TD
     D -- "PASSED" --> E["Review"]
     D -- "FAILED" --> F["Fix Loop"]
     F --> D
+    E --> G["PR + Retro"]
 
     style A fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
     style B fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
@@ -34,6 +35,7 @@ graph TD
     style D fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
     style E fill:#4a3f1a,stroke:#eab308,color:#fde68a
     style F fill:#3a1a1a,stroke:#ef4444,color:#fca5a5
+    style G fill:#1a3a1a,stroke:#22c55e,color:#86efac
 ```
 
 ### Planning Flow
@@ -63,11 +65,12 @@ graph TD
     style NP fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
 ```
 
-1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd` with gated checkpoints (Why → What → What Not → Review).
+1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd` with gated checkpoints (Why > What > What Not > Review).
 2. **Scope** — Say "Convert to stories.json" and Claude converts the PRD into two files: `stories.json` (visible to workers) and `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier).
-3. **Execute** — Say "takt solo" or "takt team". Workers implement stories against acceptance criteria. They never see the hidden scenarios.
+3. **Execute** — Say "start takt". The session agent reads `run.md`, auto-detects sequential vs parallel mode from the `waves` field, and orchestrates directly — spawning fresh worker agents for each story.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
-5. **Review** — Say "takt retro" and Claude analyzes workbooks from the run, identifies patterns, and tracks recurring issues across executions.
+5. **Review** — A code reviewer reads the feature branch diff (`.takt/review.diff`) and produces structured feedback. Must-fix issues trigger automated fix workers. Up to 2 review-fix cycles.
+6. **Ship** — PR is created automatically, retro agent processes workbooks and updates `.takt/retro.md` and `CHANGELOG.md`.
 
 ## Information Isolation
 
@@ -75,24 +78,25 @@ takt enforces strict information boundaries between agents. This is the key arch
 
 ```
 /takt command (human reviews both files)
-    ├── stories.json        → orchestrator → workers (implement features)
-    └── .takt/scenarios.json → verifier ONLY (QA verification)
-                                    │
-                              100%? → DONE
-                              <100%?→ bugs.json → fresh workers (fix)
-                                                      │
-                                                 re-verify (max 3 cycles)
+    |-- stories.json        -> session agent -> workers (implement features)
+    +-- .takt/scenarios.json -> verifier ONLY (QA verification)
+                                    |
+                              100%? -> DONE
+                              <100%?-> bugs.json -> fresh workers (fix)
+                                                         |
+                                                    re-verify (max 3 cycles)
 ```
 
-| File | Orchestrator | Worker | Verifier | Fix Worker |
-|------|-------------|--------|----------|------------|
-| `stories.json` | reads | reads | never | never |
+| File | Session Agent | Worker | Verifier | Reviewer |
+|------|--------------|--------|----------|----------|
+| `stories.json` | reads + updates | never | never | never |
 | `.takt/scenarios.json` | passes path only | **never** | reads | **never** |
-| `bugs.json` | reads (routing) | never | writes | reads |
+| `bugs.json` | reads (routing) | never | writes | never |
+| `.takt/review.diff` | writes (git diff) | never | never | reads |
 
 **How it's enforced:**
 - Workers have an explicit rule: "NEVER read files in `.takt/`"
-- Orchestrators have an explicit rule: "NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier"
+- The session agent has an explicit rule: "NEVER read `.takt/scenarios.json` content — only pass the file path to the verifier"
 - Bug tickets describe behaviors ("Form accepts empty email without validation error"), never scenario details ("SC-003 Given/When/Then failed")
 - Each agent gets a fresh context (Ralph Wiggum pattern) — no information leaks between agent instances
 
@@ -100,83 +104,63 @@ This is prompt-level architectural isolation, not cryptographic enforcement. The
 
 ## Modes
 
-### takt solo — Sprint Execution
+### start takt — Unified Execution
 
-Single orchestrator, one story at a time. The session agent reads `stories.json`, spawns a background orchestrator with all context embedded, and monitors progress. The orchestrator picks the next incomplete story, spawns a fresh worker agent to implement it, verifies acceptance criteria, updates `stories.json`, and moves to the next story. After all stories pass, runs scenario verification.
+The session agent reads `stories.json`, auto-detects mode, and orchestrates directly. No intermediary orchestrator — the session agent IS the orchestrator.
+
+**Mode auto-detection** from the `waves` field in stories.json:
+- **Sequential** — `waves` is empty or missing: stories run in priority order, independent stories may run in parallel
+- **Parallel** — any wave has 2+ stories: uses `TeamCreate` with `isolation: "worktree"` for parallel wave execution
 
 ```mermaid
 graph TD
-    U["takt solo"] --> S["Session"]
-    S --> O["Orchestrator"]
-    O --> L{"Story Loop"}
+    U["start takt"] --> S["Session Agent"]
+    S --> D{"waves?"}
+    D -- "empty" --> SQ["Sequential"]
+    D -- "2+ stories" --> PL["Parallel"]
+    SQ --> L{"Story Loop"}
+    PL --> WL{"Wave Loop"}
     L -- "next" --> W["Worker"]
-    W -- "done" --> L
+    W -- "done" --> GC["git commit"]
+    GC --> L
+    WL --> WK["Workers + Worktrees"]
+    WK --> MG["Merge + Test"]
+    MG --> WL
     L -- "all done" --> SV["Verifier"]
-    SV -- "PASSED" --> C["COMPLETE"]
+    WL -- "all done" --> SV
+    SV -- "PASSED" --> CR["Code Review"]
     SV -- "FAILED" --> FW["Fix Workers"]
     FW --> SV
+    CR --> PR["PR + Retro"]
 
     style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style D fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style SQ fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
+    style PL fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
     style W fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style WK fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
     style FW fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
+    style GC fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
+    style MG fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
     style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
-    style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
+    style CR fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style PR fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style L fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
-```
-
-Say in Claude Code:
-```
-takt solo
-```
-
-Best for: small features (2-5 stories), linear dependencies, quick delivery.
-
-### takt team — Parallel Delivery
-
-Multi-agent team execution modeled on how real engineering teams work. Same launcher pattern as solo — session agent spawns a background orchestrator that runs autonomously.
-
-```mermaid
-graph TD
-    U["takt team"] --> S["Session"]
-    S --> O["Orchestrator"]
-    O --> WL{"Wave Loop"}
-    WL --> W["Workers"]
-    W --> MP["Merge + Test"]
-    MP --> WL
-    WL -- "all done" --> SV["Verifier"]
-    SV -- "PASSED" --> C["COMPLETE"]
-    SV -- "FAILED" --> FW["Fix Workers"]
-    FW --> SV
-
-    style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style O fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
-    style W fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
-    style FW fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
-    style MP fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
-    style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
-    style C fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style WL fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
 ```
 
 Say in Claude Code:
 ```
-takt team
+start takt
 ```
 
-**How it works:**
+**Key design properties:**
+- **Session agent handles all git** — workers do file edits only (Read, Edit, Write, Glob, Grep). No Bash, no git, no sub-agent spawning.
+- **Lean prompts** — worker prompts are under 1KB: story JSON + project path + "Read ~/.claude/lib/takt/worker.md for your instructions". No embedded instruction copies.
+- **Diff file for review** — session agent writes `git diff main...HEAD > .takt/review.diff` before spawning the reviewer. Re-generated between review-fix cycles.
+- **Direct implementation** — all story types use direct implementation. BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
 
-1. **Wave planning** — The scrum master reads `stories.json`, groups stories into waves based on `dependsOn`. Wave N+1 doesn't start until Wave N is fully merged and tested.
-2. **Worktree isolation** — Each worker runs with Claude Code's native `isolation: "worktree"` feature, so agents work in parallel without stepping on each other's files. The platform creates and cleans up worktrees automatically.
-3. **Parallel implementation** — Workers implement their stories, each writing a workbook with decisions, files changed, and blockers.
-4. **Merge planning** — When a wave's workers finish, the scrum master reads their workbooks to identify file overlaps and plans the merge order to minimize conflicts.
-5. **Sequential merge** — Stories are merged into main one by one. Tests run after each merge. If a conflict arises, the scrum master consults the original author (still idle with full context) to resolve it.
-6. **Cleanup** — The platform removes worktrees automatically when worker agents exit. Next wave begins.
-7. **Scenario verification** — After all waves merge, the same verify-fix loop runs as in solo mode.
-
-The scrum master never writes code. It orchestrates, monitors, plans merges, and resolves conflicts.
-
-Best for: larger features (6+ stories), multiple independent chains, complex PRDs where parallelism pays off.
+Deprecated aliases `takt solo` and `takt team` also work — they read the same `run.md`.
 
 ### takt debug — Incident Response
 
@@ -191,26 +175,28 @@ Best for: bug fixing where discipline matters more than speed.
 
 ### takt retro — Continuous Improvement
 
-Reads workbooks from a completed run and generates a retrospective entry in `.takt/retro.md`. Scans previous entries for recurring patterns and manages an alert lifecycle: `potential` -> `confirmed` -> `mitigated` -> `resolved`.
+Reads workbooks from a completed run and generates a retrospective entry in `.takt/retro.md`. Scans previous entries for recurring patterns and manages an alert lifecycle: `potential` -> `confirmed` -> `mitigated` -> `resolved`. Stale action items (carried 3+ times) auto-escalate to confirmed alerts.
 
 Say in Claude Code:
 ```
 takt retro
 ```
 
-Suggested automatically after each solo or team run completes. The value of retros compounds over time — patterns that repeat across runs surface as confirmed alerts rather than rediscovered surprises.
+Triggered automatically after each run completes. The value of retros compounds over time — patterns that repeat across runs surface as confirmed alerts rather than rediscovered surprises.
 
 ## Artifacts
 
 | File | Purpose | Created by | Visible to |
 |------|---------|------------|------------|
-| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review | Orchestrator, workers |
+| `stories.json` | Stories, waves, dependencies, verification modes | `/takt` command + human review | Session agent, workers |
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
-| `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Orchestrator, fix workers |
-| `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Orchestrator |
+| `.takt/review.diff` | Unified diff for code review (ephemeral) | Session agent | Reviewer only |
+| `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Session agent, fix workers |
+| `review-comments.json` | Structured review feedback | Reviewer agent | Session agent |
+| `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Session agent |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent | Human |
 | `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command | Human |
-| `tasks/archive/` | Completed PRDs, auto-archived on finish | Solo/team orchestrator | Human |
+| `tasks/archive/` | Completed PRDs, auto-archived on finish | Session agent | Human |
 
 ## Installation
 
@@ -231,19 +217,52 @@ cd takt && git pull && ./install.sh
 
 ```
 ~/.claude/
-├── lib/takt/
-│   ├── solo.md               # Solo orchestrator prompt
-│   ├── verifier.md           # Scenario verification + bug ticket agent
-│   ├── team-lead.md          # Team mode scrum master prompt
-│   ├── worker.md             # Team mode worker prompt
-│   ├── debug.md              # Debug mode agent prompt
-│   └── retro.md              # Retro mode agent prompt
-├── commands/
-│   ├── takt.md               # /takt — convert PRD to stories.json
-│   ├── takt-prd.md           # /takt-prd — generate PRD
-│   └── tdd.md                # /tdd — TDD workflow
-└── CLAUDE.md                 # takt section appended
+|-- lib/takt/
+|   |-- run.md                # Unified orchestrator prompt (session-level)
+|   |-- verifier.md           # Scenario verification + bug ticket agent
+|   |-- reviewer.md           # Code review agent
+|   |-- worker.md             # Worker agent prompt (file edits only)
+|   |-- debug.md              # Debug mode agent prompt
+|   +-- retro.md              # Retro mode agent prompt
+|-- commands/
+|   |-- takt.md               # /takt -- convert PRD to stories.json
+|   |-- takt-prd.md           # /takt-prd -- generate PRD
+|   +-- tdd.md                # /tdd -- TDD workflow
++-- CLAUDE.md                 # takt section appended
 ```
+
+### Permission Setup
+
+takt requires autonomous bash execution for git, jq, and gh commands. Workers already run with `bypassPermissions`, but the session agent (orchestrator) needs permission to run these commands without prompting.
+
+**Option 1: Launch with skip-permissions (recommended for takt runs)**
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+Start your Claude Code session with this flag before saying "start takt". All commands auto-approve.
+
+**Option 2: Allowlist specific commands**
+
+Add to your project's `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(git status)",
+      "Bash(jq *)",
+      "Bash(mkdir *)",
+      "Bash(command *)",
+      "Bash(gh *)"
+    ]
+  }
+}
+```
+
+Requires a session restart to take effect.
 
 ## Prerequisites
 
