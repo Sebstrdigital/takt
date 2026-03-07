@@ -130,7 +130,7 @@ When an alert status changes to `mitigated` or `resolved`, record the improvemen
 After the retro entry has been successfully written to `.takt/retro.md`:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the PRD: derive filename from `stories.json` branchName (`takt/feature-name` → `tasks/prd-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
-- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`
+- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
 - Only delete after confirming the retro entry was written successfully
 
 ## Rules
