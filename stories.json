@@ -1,0 +1,86 @@
+{
+  "project": "takt",
+  "branchName": "takt/baseline-completion",
+  "description": "Complete takt baseline: fix retro routing, add stale action item escalation, automated PR creation, and auto-retro",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix retro routing confusion",
+      "description": "As a takt user, I want 'takt retro' to always trigger the retro agent so that I don't accidentally end up in the PRD converter.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "When a user says 'takt retro', the session agent reads ~/.claude/lib/takt/retro.md and runs the retro flow — never the /takt slash command",
+        "The /takt command description explicitly states it is for PRD-to-stories conversion only and rejects retro requests",
+        "The takt CLAUDE.md includes a routing table mapping each takt phrase to its prompt file"
+      ],
+      "priority": 1,
+      "size": "small",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-07 11:10",
+      "endTime": "2026-03-07 11:14",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-002",
+      "title": "Stale action item escalation in retro agent",
+      "description": "As a takt user, I want the retro agent to detect and escalate stale action items so that recurring issues get addressed instead of silently carrying forward.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "When the retro agent finds an action item carried forward 3+ retros without being addressed, it escalates the alert to confirmed and appends a suggested story description",
+        "Carried-forward action items are marked with their carry count (e.g., '[carried 4x]') in the retro entry",
+        "When an action item is addressed, the escalation resets"
+      ],
+      "priority": 2,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-07 11:10",
+      "endTime": "2026-03-07 11:14",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-003",
+      "title": "Automated PR creation phase",
+      "description": "As a takt orchestrator, I want to automatically create a GitHub PR after code review passes so that the human only needs to merge.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "After the code review phase, the orchestrator runs 'gh pr create' with a structured body containing summary, stories completed, verification result, review notes, and run metrics",
+        "The PR is created as draft if unresolved review suggestions exist, or ready if the review was clean",
+        "Both solo.md and team-lead.md include the PR creation phase after code review and before completion"
+      ],
+      "priority": 3,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-07 11:10",
+      "endTime": "2026-03-07 11:14",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-004",
+      "title": "Auto-retro phase",
+      "description": "As a takt orchestrator, I want the retro to run automatically after PR creation so that the full pipeline completes without manual intervention.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "After PR creation, the orchestrator spawns a retro agent Task that reads workbooks, generates a retro entry, and commits the result to the feature branch",
+        "The session agent's completion message reports the PR URL and retro summary instead of suggesting 'run takt retro'",
+        "Both solo.md and team-lead.md include the auto-retro phase as the final step before the completion signal"
+      ],
+      "priority": 4,
+      "size": "medium",
+      "passes": true,
+      "verify": "deep",
+      "startTime": "2026-03-07 11:15",
+      "endTime": "2026-03-07 11:18",
+      "dependsOn": [
+        "US-003"
+      ],
+      "knownIssues": []
+    }
+  ],
+  "waves": []
+}
