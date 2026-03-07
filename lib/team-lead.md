@@ -380,6 +380,60 @@ After the review-fix loop:
   These issues were not automatically resolved. Manual review recommended.
   ```
 
+## PR Creation Phase
+
+After the code review phase, automatically create a pull request if the `gh` CLI is available.
+
+1. Check if `gh` CLI is available:
+   ```bash
+   command -v gh >/dev/null 2>&1
+   ```
+   If not available, log "gh CLI not found — skipping PR creation" and proceed to Completion.
+
+2. Push the feature branch:
+   ```bash
+   git push -u origin <branchName>
+   ```
+
+3. Build the PR body from run artifacts:
+
+   - **Summary**: from stories.json `description` field
+   - **Stories completed**: list each story with its ID, title, and pass/fail status
+   - **Verification**: "PASSED" or "PASSED after N fix cycles" (based on the verify-fix loop cycle count)
+   - **Review notes**: if `review-comments.json` exists and has `suggestion` severity comments, list them as unresolved suggestions
+   - **Metrics**: story count, total time (computed from earliest `startTime` to latest `endTime` across stories)
+
+4. Determine draft status:
+   ```bash
+   jq '[.[] | select(.severity == "suggestion")] | length' review-comments.json 2>/dev/null
+   ```
+   If the count is greater than 0, use `--draft`. Otherwise create a ready PR.
+
+5. Create the PR using HEREDOC format:
+   ```bash
+   PR_URL=$(gh pr create --title "feat: <branchName summary>" --body "$(cat <<'EOF'
+   ## Summary
+   <description from stories.json>
+
+   ## Stories Completed
+   - <STORY-ID>: <title> — PASSED/FAILED
+
+   ## Verification
+   <PASSED or PASSED after N fix cycles>
+
+   ## Review Notes
+   <list of suggestion-severity comments, or "Clean — no suggestions">
+
+   ## Metrics
+   - Stories: <count>
+   - Total time: <duration>
+   EOF
+   )" <--draft if needed>)
+   echo "$PR_URL"
+   ```
+
+6. Capture the PR URL from stdout for use in the Completion phase.
+
 ## Completion
 
 When all waves are done:
@@ -392,7 +446,11 @@ When all waves are done:
    git commit -m "chore: mark all stories complete in stories.json" --allow-empty
    ```
 5. Output: `<promise>COMPLETE</promise>`
-6. Suggest: "Run `takt retro` to generate retrospective and clean up run artifacts."
+6. Print the PR URL if one was created:
+   ```
+   PR created: <PR_URL>
+   ```
+7. Suggest: "Run `takt retro` to generate retrospective and clean up run artifacts."
 
 ## Rules
 
