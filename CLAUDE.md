@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is takt?
 
-takt is an autonomous AI agent orchestrator that runs natively inside Claude Code. Four modes: solo (sequential), team (parallel), debug (bug-fixing), and retro (retrospective). Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
+takt is an autonomous AI agent orchestrator that runs natively inside Claude Code. Primary command: `start takt` (auto-detects sequential vs parallel from stories.json). Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
 
-There is no bash script or CLI binary. The user says "takt solo" or "takt team" in Claude Code, which reads the appropriate prompt file and spawns autonomous agents using Claude Code's native Task and TeamCreate tools.
+There is no bash script or CLI binary. The user says "start takt" in Claude Code, which reads the unified prompt file and spawns autonomous agents using Claude Code's native Task tool.
 
 Each mode spawns fresh Claude Code agent instances. Memory persists via:
 - **Git history** - commits from previous iterations
@@ -18,10 +18,13 @@ Each mode spawns fresh Claude Code agent instances. Memory persists via:
 
 Say these phrases in Claude Code (they are not terminal commands):
 
-- **takt solo** — run stories sequentially (reads `~/.claude/lib/takt/solo.md`)
-- **takt team** — run stories in parallel with multiple agents (reads `~/.claude/lib/takt/team-lead.md`)
+- **start takt** — run stories (reads `~/.claude/lib/takt/run.md`, auto-detects sequential vs parallel from waves)
 - **takt debug** — structured bug-fixing discipline (reads `~/.claude/lib/takt/debug.md`)
 - **takt retro** — generate retrospective from workbooks (reads `~/.claude/lib/takt/retro.md`)
+
+Deprecated aliases (also read `run.md`):
+- `takt solo` — same as `start takt`
+- `takt team` — same as `start takt`
 
 ### Command Routing (IMPORTANT)
 
@@ -29,14 +32,15 @@ These phrases trigger prompt file reads, NOT slash commands:
 
 | User says | Session agent reads | NOT |
 |-----------|-------------------|-----|
-| `takt solo` | `~/.claude/lib/takt/solo.md` | /takt |
-| `takt team` | `~/.claude/lib/takt/team-lead.md` | /takt |
+| `start takt` | `~/.claude/lib/takt/run.md` | /takt |
+| `takt solo` (deprecated) | `~/.claude/lib/takt/run.md` | /takt |
+| `takt team` (deprecated) | `~/.claude/lib/takt/run.md` | /takt |
 | `takt debug` | `~/.claude/lib/takt/debug.md` | /takt |
 | `takt retro` | `~/.claude/lib/takt/retro.md` | /takt |
 
 The `/takt` slash command is ONLY for converting PRDs to stories.json. Never route mode commands through it.
 
-**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/solo.md`, `team-lead.md`, etc.) and follow its "How to Launch" section exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
+**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
 
 Slash commands (also in Claude Code):
 - `/takt-prd` — generate a PRD from a feature description
@@ -49,19 +53,18 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 
 ### How It Works
 
-1. User says "takt solo" (or team/debug/retro) in Claude Code
-2. The **session agent** reads the corresponding prompt from `~/.claude/lib/takt/`
-3. The session agent reads `stories.json`, prints a story matrix, and reads supporting files (worker.md, verifier.md)
-4. The session agent spawns ONE **orchestrator Task** (`mode: "bypassPermissions"`, `run_in_background: true`) with all context embedded in the prompt
-5. The orchestrator runs autonomously — zero permission prompts — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
+1. User says "start takt" in Claude Code
+2. The **session agent** reads `~/.claude/lib/takt/run.md`
+3. The session agent reads `stories.json`, detects mode (sequential vs parallel from waves), prints a story matrix
+4. The session agent orchestrates directly — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
+5. Workers run autonomously with `mode: "bypassPermissions"` and `run_in_background: true`
 6. The session agent monitors progress via `TaskOutput` + reading `stories.json`, printing one-liner status updates
-7. The orchestrator updates `stories.json` as stories complete and outputs `<promise>COMPLETE</promise>` when done
+7. Stories are updated in `stories.json` as they complete
 
 ### Key Files (source -> installed)
-- `lib/solo.md` -> `~/.claude/lib/takt/solo.md` - Solo orchestrator prompt
+- `lib/run.md` -> `~/.claude/lib/takt/run.md` - Unified orchestrator prompt (replaces solo.md + team-lead.md)
 - `agents/verifier.md` -> `~/.claude/lib/takt/verifier.md` - Deep verification agent
-- `lib/team-lead.md` -> `~/.claude/lib/takt/team-lead.md` - Team scrum master prompt
-- `lib/worker.md` -> `~/.claude/lib/takt/worker.md` - Team worker prompt
+- `lib/worker.md` -> `~/.claude/lib/takt/worker.md` - Worker prompt
 - `lib/debug.md` -> `~/.claude/lib/takt/debug.md` - Debug agent prompt
 - `lib/retro.md` -> `~/.claude/lib/takt/retro.md` - Retro agent prompt
 - `commands/*.md` -> `~/.claude/commands/` - Slash commands
