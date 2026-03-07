@@ -33,7 +33,9 @@ Append a new entry to `.takt/retro.md`:
 - [Recurring themes across stories]
 
 ### Action Items
-- [ ] [Specific, actionable improvement for next run]
+- [ ] [carried 4x] Clean up stale factories.ts — Suggested story: Delete factories.ts and factories.test.ts from cs-agent-saas
+- [ ] [carried 2x] Improve error handling in worker agent
+- [ ] New action item from this run
 
 ### Metrics
 - Stories completed: X/Y
@@ -85,6 +87,22 @@ If `.takt/retro.md` already exists:
 - Read previous entries
 - Compare current patterns to historical ones
 - Update alert statuses based on new evidence
+- **Track stale action items**: For each unchecked action item in the previous entry:
+  - Extract any existing carry count from a `[carried Nx]` tag (default 1 if no tag)
+  - Fuzzy-match the item text (substring match) against all workbooks from the current run
+  - If the item is addressed (matched in a workbook or explicitly checked off) → resolved, do not carry forward
+  - If the item is NOT addressed → increment carry count and carry it forward into the new entry
+
+### 3b. Stale Action Item Escalation
+After checking history, process carried-forward items by their carry count:
+- **carry count >= 3** (stale):
+  - Escalate the related alert in the alerts table to `confirmed` status. If no matching alert exists, create one as `confirmed`.
+  - In the new retro entry's Action Items section, prefix the item with `[carried Nx]`
+  - Append a one-liner after the item: `Suggested story: <actionable description to fix the underlying issue>`
+- **carry count < 3** (not yet stale):
+  - Carry the item forward into the new entry's Action Items section with a `[carried Nx]` tag
+  - No alert escalation
+- **Addressed items**: Do not carry forward. If there was a related alert, consider whether the alert should move to `mitigated`.
 
 ### 4. Generate Entry
 Write the retro entry with specific, evidence-based observations. Reference story IDs and workbook content.
@@ -112,7 +130,7 @@ When an alert status changes to `mitigated` or `resolved`, record the improvemen
 After the retro entry has been successfully written to `.takt/retro.md`:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the PRD: derive filename from `stories.json` branchName (`takt/feature-name` → `tasks/prd-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
-- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `bugs.json`, `review-comments.json`
+- Delete run artifacts: `stories.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
 - Only delete after confirming the retro entry was written successfully
 
 ## Rules

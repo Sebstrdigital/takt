@@ -1,0 +1,16 @@
+{
+  "enabledPlugins": {
+    "playground@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(git status)",
+      "Bash(mkdir -p *)",
+      "Bash(jq *)",
+      "Bash(command -v *)",
+      "Bash(gh pr *)",
+      "Bash(gh pr create *)"
+    ]
+  }
+}

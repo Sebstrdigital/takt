@@ -126,20 +126,21 @@ echo ""
 # --- takt core ---
 echo "takt -> $TAKT_DIR/"
 mkdir -p "$TAKT_DIR"
-cp "$SCRIPT_DIR/lib/solo.md" "$TAKT_DIR/solo.md"
-# prompt.md removed in v2 — solo.md + worker.md replace it
-if [ -f "$TAKT_DIR/prompt.md" ]; then
-    rm -f "$TAKT_DIR/prompt.md"
-fi
+cp "$SCRIPT_DIR/lib/run.md" "$TAKT_DIR/run.md"
+# Clean up old prompt files replaced by run.md
+for old_file in prompt.md solo.md team-lead.md; do
+    if [ -f "$TAKT_DIR/$old_file" ]; then
+        rm -f "$TAKT_DIR/$old_file"
+        echo -e "  ${YELLOW}removed${NC}  $old_file (replaced by run.md)"
+    fi
+done
 cp "$SCRIPT_DIR/agents/verifier.md" "$TAKT_DIR/verifier.md"
-cp "$SCRIPT_DIR/lib/team-lead.md" "$TAKT_DIR/team-lead.md"
 cp "$SCRIPT_DIR/lib/worker.md" "$TAKT_DIR/worker.md"
 cp "$SCRIPT_DIR/lib/debug.md" "$TAKT_DIR/debug.md"
 cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
 cp "$SCRIPT_DIR/lib/reviewer.md" "$TAKT_DIR/reviewer.md"
-echo -e "  ${GREEN}copied${NC}   solo.md"
+echo -e "  ${GREEN}copied${NC}   run.md"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
-echo -e "  ${GREEN}copied${NC}   team-lead.md"
 echo -e "  ${GREEN}copied${NC}   worker.md"
 echo -e "  ${GREEN}copied${NC}   debug.md"
 echo -e "  ${GREEN}copied${NC}   retro.md"
@@ -172,7 +173,7 @@ When the user discusses a new feature, significant change, or enters plan mode f
 
 1. "This sounds like it could be X stories — want me to create a PRD with `/takt-prd`?"
 2. After PRD approval: convert to `stories.json` + `.takt/scenarios.json` with `/takt`
-3. Execute with `takt solo` (≤5 stories) or `takt team` (6+ stories)
+3. Execute with `start takt` (auto-detects sequential vs parallel from stories.json waves)
 
 **Plan-mode interception — IMPORTANT:**
 When the user wants to plan a feature (says "plan this", "I want to build X", or you're about to enter plan mode), use **AskUserQuestion** BEFORE entering native plan mode:
@@ -188,15 +189,13 @@ If the user picks native plan → proceed with standard `EnterPlanMode`.
 If the user mentions takt outside of a planning session (no active PRD, no feature discussion in progress), present the available modes:
 
 > Which takt mode do you want to run?
-> - `takt solo` — Execute stories sequentially (needs `stories.json`)
-> - `takt team` — Execute stories in parallel with multiple agents (needs `stories.json` with waves)
+> - `start takt` — Execute stories (auto-detects sequential/parallel, needs `stories.json`)
 > - `takt debug` — Bug-fixing discipline (needs bug description or `bugs.json`)
 > - `takt retro` — Retrospective from workbooks (needs `workbook-*.md` files)
 > - `/takt-prd` — Start fresh: create a PRD for a new feature
 
 **Commands:**
-- `takt solo` — run stories sequentially (needs `stories.json`)
-- `takt team` — run stories in parallel (multi-agent)
+- `start takt` — run stories (auto-detects sequential/parallel from waves)
 - `takt debug` — strict bug-fixing discipline
 - `takt retro` — post-execution retrospective
 - `/takt-prd` — generate PRD from feature description
@@ -204,9 +203,9 @@ If the user mentions takt outside of a planning session (no active PRD, no featu
 - `/tdd` — TDD workflow
 
 **CRITICAL — Agent Type Rule:**
-When launching any takt mode (`takt solo`, `takt team`, etc.), you MUST:
-1. Read the corresponding prompt file FIRST (`~/.claude/lib/takt/solo.md`, `team-lead.md`, etc.)
-2. Follow its "How to Launch" section exactly
+When launching any takt mode (`start takt`, `takt debug`, etc.), you MUST:
+1. Read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.)
+2. Follow its instructions exactly
 3. Use `subagent_type: "general-purpose"` and `model: "sonnet"` for ALL spawned Tasks
 4. NEVER use custom/named agent types (e.g. "Seb the boss", TDD agents, or any other named agent from the Task tool's agent list). The prompt files define the correct configuration — trust them.
 <!-- takt:end -->

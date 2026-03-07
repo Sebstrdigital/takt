@@ -1,0 +1,88 @@
+{
+  "project": "takt",
+  "branchName": "takt/prompt-refactor",
+  "description": "Unified session-level orchestration, prompt diet, drop TDD, auto-detect mode, .diff review file",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create unified orchestrator prompt (run.md)",
+      "description": "As the session agent, I want a single orchestrator file that handles both sequential and parallel execution so I don't need separate solo/team modes.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "A new lib/run.md replaces both lib/solo.md and lib/team-lead.md — single flat document addressed to the session agent",
+        "When stories.json has no waves or all waves have 1 story: execute sequentially; when waves have 2+ stories: use TeamCreate with worktree isolation",
+        "All phases present in order: story loop, scenario verification, code review, PR creation, auto-retro, completion"
+      ],
+      "priority": 1,
+      "size": "large",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "2026-03-07 14:23",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-002",
+      "title": "Implement lean agent prompts with .diff review file",
+      "description": "As the session agent, I want to spawn workers/verifiers/reviewers with minimal pointer-based prompts and use .takt/review.diff for code review communication.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "Worker prompts contain only: story JSON + project path + pointer to worker.md — under 1KB total",
+        "Verifier and reviewer prompts follow the same pointer pattern — reviewer reads .takt/review.diff (unified diff format) instead of running git diff",
+        "Session agent writes git diff to .takt/review.diff before review, re-generates between fix cycles, retro cleans it up"
+      ],
+      "priority": 2,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "2026-03-07 14:44",
+      "dependsOn": [
+        "US-001"
+      ],
+      "knownIssues": []
+    },
+    {
+      "id": "US-003",
+      "title": "Update worker.md — file-edit-only scope, drop TDD",
+      "description": "As a worker agent, I want clear instructions that my job is file edits only, with BDD scenarios as the quality gate.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "worker.md git section replaced with: 'Do NOT run git commands — the session agent handles all git operations'",
+        "TDD workflow (RED/GREEN/REFACTOR) removed — workers implement directly, BDD scenarios are the verification layer",
+        "The /takt converter (commands/takt.md) story type section simplified to reflect no TDD enforcement at worker level"
+      ],
+      "priority": 3,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "",
+      "endTime": "2026-03-07 14:23",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-004",
+      "title": "Update CLAUDE.md, install.sh, and routing for 'start takt'",
+      "description": "As a takt user, I want the documentation, installer, and routing to reflect the unified 'start takt' command and run.md.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "CLAUDE.md routing table updated: 'start takt' maps to run.md, 'takt solo' and 'takt team' are deprecated aliases",
+        "install.sh updated: installs run.md, removes solo.md and team-lead.md from install targets",
+        "Global CLAUDE.md instructions (~/.claude/CLAUDE.md takt section) updated to reflect 'start takt' as the primary command"
+      ],
+      "priority": 4,
+      "size": "medium",
+      "passes": true,
+      "verify": "deep",
+      "startTime": "",
+      "endTime": "2026-03-07 14:45",
+      "dependsOn": [
+        "US-001"
+      ],
+      "knownIssues": []
+    }
+  ],
+  "waves": []
+}

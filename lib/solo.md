@@ -85,8 +85,12 @@ Loop until the orchestrator completes:
 
 When the orchestrator finishes (or you see `<promise>COMPLETE</promise>` in its output):
 
+Report the PR URL and retro summary from the orchestrator's output to the user. Example:
+
 ```
-All stories complete. Run `takt retro` to wrap up.
+All stories complete. PR created and retro committed.
+PR: <PR_URL>
+Retro: <one-line retro summary>
 ```
 
 If the orchestrator reports failure, relay the failure summary to the user.
@@ -453,6 +457,96 @@ After the review-fix loop:
   These issues were not automatically resolved. Manual review recommended.
   ```
 
+## PR Creation Phase
+
+After the code review phase, automatically create a pull request if the `gh` CLI is available.
+
+1. Check if `gh` CLI is available:
+   ```bash
+   command -v gh >/dev/null 2>&1
+   ```
+   If not available, log "gh CLI not found — skipping PR creation" and proceed to Completion.
+
+2. Push the feature branch:
+   ```bash
+   git push -u origin <branchName>
+   ```
+
+3. Build the PR body from run artifacts:
+
+   - **Summary**: from stories.json `description` field
+   - **Stories completed**: list each story with its ID, title, and pass/fail status
+   - **Verification**: "PASSED" or "PASSED after N fix cycles" (based on the verify-fix loop cycle count)
+   - **Review notes**: if `review-comments.json` exists and has `suggestion` severity comments, list them as unresolved suggestions
+   - **Metrics**: story count, total time (computed from earliest `startTime` to latest `endTime` across stories)
+
+4. Determine draft status:
+   ```bash
+   jq '[.[] | select(.severity == "suggestion")] | length' review-comments.json 2>/dev/null
+   ```
+   If the count is greater than 0, use `--draft`. Otherwise create a ready PR.
+
+5. Create the PR using HEREDOC format:
+   ```bash
+   PR_URL=$(gh pr create --title "feat: <branchName summary>" --body "$(cat <<'EOF'
+   ## Summary
+   <description from stories.json>
+
+   ## Stories Completed
+   - <STORY-ID>: <title> — PASSED/FAILED
+
+   ## Verification
+   <PASSED or PASSED after N fix cycles>
+
+   ## Review Notes
+   <list of suggestion-severity comments, or "Clean — no suggestions">
+
+   ## Metrics
+   - Stories: <count>
+   - Total time: <duration>
+   EOF
+   )" <--draft if needed>)
+   echo "$PR_URL"
+   ```
+
+6. Capture the PR URL from stdout for use in the Completion phase.
+
+## Auto-Retro Phase
+
+After PR creation (or if PR creation was skipped), automatically run a retrospective.
+
+1. Spawn a retro agent Task:
+   - **subagent_type**: `"general-purpose"`
+   - **model**: `"sonnet"`
+   - **mode**: `"bypassPermissions"`
+   - **run_in_background**: `true`
+   - **prompt**:
+     ```
+     # Auto-Retro
+
+     ## Project Working Directory
+     <absolute path to project root>
+
+     ## Branch
+     <branchName>
+
+     ## Instructions
+     Read `~/.claude/lib/takt/retro.md` for the full retro agent instructions and follow them.
+
+     Specifically:
+     1. Read all workbooks from `.takt/workbooks/`
+     2. Generate a retro entry in `.takt/retro.md`
+     3. Update `CHANGELOG.md` if needed
+     4. Clean up workbooks (delete processed workbook files)
+     5. Commit and push all retro changes to the current branch
+
+     When complete, output a one-line summary of the retro findings.
+     ```
+
+2. Wait for the retro agent to complete via `TaskOutput`.
+
+3. Capture the one-line retro summary from the agent's output.
+
 ## Completion
 
 After all stories pass (including deep verification):
@@ -475,11 +569,15 @@ After all stories pass (including deep verification):
    <promise>COMPLETE</promise>
    ```
 
-4. Suggest next steps:
+4. Print the PR URL and retro summary:
    ```
-   All stories complete. Suggested next steps:
-   - Run `takt retro` to generate retrospective and clean up run artifacts
-   - Create a PR for branch <branchName>
+   PR created: <PR_URL>
+   Retro: <one-line retro summary>
+   ```
+
+5. Final status:
+   ```
+   All stories complete. PR created and retro committed.
    ```
 
 ## Rules
