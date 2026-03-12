@@ -108,10 +108,12 @@ No artifacts exist — start from scratch.
 
 ```
 AskUserQuestion:
-  question: "No takt artifacts found. Where would you like to start?"
+  question: "No takt artifacts found. How would you like to start?"
   header: "Starting fresh"
   options:
-    - label: "Full flow — start with /epic (Recommended)"
+    - label: "Quick path — 3-question interview (Recommended for small changes)"
+      description: "Answer why/what/what-not and I'll generate sprint.json directly — no Feature doc needed. Best for focused changes or small features."
+    - label: "Full flow — start with /epic"
       description: "Define a high-level Epic first, then break it into Features. Best for large or multi-feature initiatives."
     - label: "Skip Epic — go straight to /feature"
       description: "Jump directly to Feature planning. Best when you already know the scope of a single feature."
@@ -119,9 +121,49 @@ AskUserQuestion:
       description: "I have a Feature doc already written — run /sprint to convert it"
 ```
 
+If the user chooses Quick path: run the **Quick Path Interview** (see below).
 If the user chooses full flow: invoke `/epic`.
 If the user chooses skip Epic: invoke `/feature`.
 If the user chooses convert: ask for the Feature doc path or content, then invoke `/sprint`.
+
+---
+
+## Quick Path Interview
+
+Run this when the user selects the Quick path option. Ask all three questions in a **single prompt** — do not split them into separate turns.
+
+```
+AskUserQuestion:
+  question: "Answer these 3 questions and I'll generate sprint.json directly:\n\n1. Why — What's the motivation? What problem or goal drives this change?\n2. What — What needs to be built or changed? (scope of this sprint)\n3. What not — What is explicitly out of scope? What won't you change?"
+  header: "Quick path: 3 questions"
+```
+
+Once the user answers all three:
+
+1. **Synthesize the answers** into a feature description (no file saved — this is ephemeral).
+2. **Generate sprint.json** directly at the project root using the same rules as `/sprint`:
+   - Break the "what" into right-sized user stories
+   - Apply dependency ordering, type, size, complexity, verify fields
+   - Set `branchName` from a kebab-case slug of the feature description
+   - Use the "why" to write story descriptions and acceptance criteria
+   - Use the "what not" to exclude scope that might otherwise creep in
+3. **Generate `.takt/scenarios.json`** alongside sprint.json (same rules as `/sprint`).
+4. **Do NOT create a Feature doc** — no `tasks/feature-*.md` artifact is saved.
+5. **Present the summary and offer to start**, same as `/sprint` does after conversion:
+
+```
+✅ sprint.json ready! (Quick path — no Feature doc created)
+✅ .takt/scenarios.json generated
+
+Branch: takt/[feature-slug]
+Stories: X total (Y small, Z medium, W large)
+  - US-001: [title] (small, inline)
+  - ...
+
+Would you like me to start the takt?
+```
+
+If the user says yes: say `start takt`.
 
 ---
 
@@ -143,6 +185,9 @@ Each gate uses **AskUserQuestion** so the user is always in control of when to a
 
 - [ ] Scanned for `sprint.json`, `tasks/feature-*.md`, `tasks/epic-*.md` before asking anything
 - [ ] Presented the correct case (A/B/C/D) based on what was found
+- [ ] Case D included both "Quick path" and "Full flow" options
+- [ ] Quick path asked all 3 interview questions (why/what/what-not) in a single prompt
+- [ ] Quick path generated sprint.json + .takt/scenarios.json without creating a Feature doc artifact
 - [ ] Used AskUserQuestion for all state-presentation gates
 - [ ] Did not bypass downstream skill gates (`/epic`, `/feature`, `/sprint` handle their own flow)
 - [ ] Each transition offered a "start over" or "go back" path
