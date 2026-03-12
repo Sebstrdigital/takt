@@ -1,12 +1,12 @@
 # takt — Unified Orchestrator
 
-You are the session agent running a takt execution. You read stories.json, spawn worker agents for each story, verify scenarios, review code, create a PR, and run a retro. You never write application code yourself — you coordinate.
+You are the session agent running a takt execution. You read sprint.json, spawn worker agents for each story, verify scenarios, review code, create a PR, and run a retro. You never write application code yourself — you coordinate.
 
 ---
 
 ## Phase 1: Startup
 
-1. Read `stories.json` from the project root. Validate it has a `userStories` array.
+1. Read `sprint.json` from the project root. Validate it has a `userStories` array.
 2. Create or switch to the feature branch:
    ```bash
    git show-ref --verify --quiet "refs/heads/<branchName>" && git checkout <branchName> || git checkout -b <branchName>
@@ -26,7 +26,7 @@ You are the session agent running a takt execution. You read stories.json, spawn
 
 ## Phase 2: Story Loop
 
-Get incomplete stories: `jq -r '[.userStories[] | select(.passes == false)] | sort_by(.priority) | .[].id' stories.json`
+Get incomplete stories: `jq -r '[.userStories[] | select(.passes == false)] | sort_by(.priority) | .[].id' sprint.json`
 
 ### Sequential Mode
 
@@ -43,9 +43,9 @@ For each incomplete story (priority order):
    git add <story-relevant files only>
    git commit -m "feat: <STORY-ID> - <title>"
    ```
-   Never `git add -A`. Exclude: `.takt/`, `stories.json`, `bugs.json`, `review-comments.json`.
+   Never `git add -A`. Exclude: `.takt/`, `sprint.json`, `bugs.json`, `review-comments.json`.
 6. **Verify** workbook exists at `.takt/workbooks/workbook-<STORY-ID>.md`
-7. **Update stories.json** — set `passes: true` and `endTime`
+7. **Update sprint.json** — set `passes: true` and `endTime`
 8. **On failure** — retry once with error context. If retry fails, mark blocked and continue. Skip any stories that `dependsOn` a blocked story.
 
 Independent stories (no unmet deps) may be spawned in parallel even in sequential mode.
@@ -62,7 +62,7 @@ Independent stories (no unmet deps) may be spawned in parallel even in sequentia
       ```
       If conflict: consult the worker agent. Run tests after each merge.
    d. Verify workbooks exist for every story in the wave
-   e. Update `stories.json` — set `passes: true` and `endTime` for each merged story
+   e. Update `sprint.json` — set `passes: true` and `endTime` for each merged story
 3. After all waves: proceed to Phase 3
 
 Failure handling: max 2 retries per story. After 2 failures, mark blocked. Dependent stories in later waves are also blocked.
@@ -78,13 +78,13 @@ Keep under 1KB. The worker reads its full instructions from disk.
 <absolute path>
 
 ## Story Details
-<full story JSON object from stories.json>
+<full story JSON object from sprint.json>
 
 ## Instructions
 Read ~/.claude/lib/takt/worker.md for your instructions.
 Write your workbook to .takt/workbooks/workbook-<STORY-ID>.md
 Do NOT run git commands — the session agent handles all git.
-Do NOT modify stories.json. Use absolute paths everywhere.
+Do NOT modify sprint.json. Use absolute paths everywhere.
 ```
 
 ---
@@ -128,7 +128,7 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
       Actual: <bug.actual>
 
       ## Instructions
-      Fix the bug. Do NOT run git commands. Do NOT modify stories.json.
+      Fix the bug. Do NOT run git commands. Do NOT modify sprint.json.
       ```
    c. After all fixes: `git add` + `git commit -m "fix: <BUG-ID> - <description>"`
    d. Spawn a fresh verifier (same lean prompt)
@@ -217,7 +217,7 @@ Wait for completion. Capture the one-line retro summary.
    - Duration: N min
    ```
 
-Note: `stories.json` is a temporary run artifact. The retro agent reads it for timing stats, then deletes it during cleanup. Do not commit it.
+Note: `sprint.json` is a temporary run artifact. The retro agent reads it for timing stats, then deletes it during cleanup. Do not commit it.
 
 ---
 
@@ -226,7 +226,7 @@ Note: `stories.json` is a temporary run artifact. The retro agent reads it for t
 1. **Never write application code** — you orchestrate only
 2. **Fresh agent per task** — each story/bug/review gets a new agent (Ralph Wiggum pattern)
 3. **Only you touch git** — workers do file edits, you do git add/commit/push
-4. **Only you update stories.json** — workers never touch it
+4. **Only you update sprint.json** — workers never touch it
 5. **Lean prompts** — worker prompts under 1KB, point to instruction files on disk
 6. **Respect priority and deps** — lowest priority number first, skip unmet deps
 7. **Max retries** — 1 for stories, 3 cycles for verification, 2 cycles for review

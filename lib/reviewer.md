@@ -114,7 +114,7 @@ review-comments.json written to project root.
 
 ## Rules
 
-1. **Read only** — never modify source files, stories.json, scenarios.json, or any file other than `review-comments.json`
+1. **Read only** — never modify source files, sprint.json, scenarios.json, or any file other than `review-comments.json`
 2. **One output file** — write exactly one file: `review-comments.json` at the project root
 3. **Self-contained comments** — each comment must make sense in isolation (fix workers see only the comment text)
 4. **No false positives** — when in doubt about severity, use `suggestion` not `must-fix`

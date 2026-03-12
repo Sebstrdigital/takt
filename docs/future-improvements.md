@@ -377,3 +377,59 @@ Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story
 - **Qualitative analysis (from LLM):** implementation quality observations, workflow notes, key decisions
 
 **When to implement:** When retro entries show demand for a post-run summary artifact beyond the workbooks.
+
+---
+
+## Role Architecture — Model Assignment by Role & Complexity
+
+**Added:** 2026-03-11 — validity not yet confirmed, needs investigation before implementing.
+
+### Design Philosophy
+
+Roles are model-agnostic. Each role has an assigned capability tier rather than a hardcoded model, so takt works across any provider. Model-to-tier mapping is configured externally per deployment.
+
+### Tier Map (Anthropic / Claude Code)
+
+| Tier | Model | Reasoning |
+|------|-------|-----------|
+| FRONTIER | `claude-opus-4-6` | Always on |
+| FRONTIER-LITE | `claude-sonnet-4-6` | On |
+| STRONG | `claude-sonnet-4-6` | Off |
+| CAPABLE | `claude-haiku-4-5` | On |
+| FAST | `claude-haiku-4-5` | Off |
+
+### Role Assignments
+
+| Role | Tier | Rationale |
+|------|------|-----------|
+| Planner | FRONTIER | Ambiguity + long-range tradeoffs |
+| Story Architect | FRONTIER (maybe FRONTIER-LITE) | Decomposition reasoning — test Sonnet + reasoning first |
+| Merge Strategist | FRONTIER-LITE | Hard but bounded — Opus overkill |
+| Orchestrator | STRONG | Routing + structured decisions |
+| Verifier | STRONG | Judgment, not frontier reasoning |
+| Retrospective Agent | STRONG | Structured synthesis |
+| Complex Worker | STRONG | Real coding judgment required |
+| Complex Simple Worker | CAPABLE | Minor logic, light cross-file awareness |
+| Simple Worker | FAST | Boilerplate, moves, renaming, scaffolding |
+| Summarizer | FAST | Lightweight text transformation |
+| File Router | FAST | Pattern matching only |
+
+**Merge Strategist pattern:** Orchestrator (STRONG) spawns Merge Strategist as a one-shot subagent with reasoning on, receives merge order, resumes at STRONG. Elevated reasoning lives only for that single decision.
+
+### Task Classification (Simple vs Complex)
+
+**Simple → FAST:** No logic branching, single file, deterministic output, clear template to follow.
+
+**Complex → STRONG:** Multiple files, requires understanding existing patterns, logic decisions, integration points, semantic refactoring.
+
+If a Simple Worker produces poor output, Verifier flags it and Orchestrator retries at STRONG. Escalation is recovery, not default.
+
+### Open Questions (investigate before implementing)
+
+1. **Reasoning toggle** — Does Claude Code's `Agent`/`Task` tool expose a `reasoning: true/false` parameter? If not, the FRONTIER-LITE and CAPABLE tiers collapse — only model selection is available. **This is the critical blocker.**
+2. **Haiku pool** — Does Max subscription segment Haiku from Sonnet/Opus? If yes, Simple Worker on Haiku is a compounding speed + token win. If no, benefit is speed only.
+3. **Story Architect tier** — Test Sonnet 4.6 + reasoning against Opus on a real PRD before defaulting to Opus.
+4. **Reasoning token cost** — Reasoning mode on Sonnet/Haiku increases token consumption. Measure actual cost delta before assuming FRONTIER-LITE is significantly cheaper than FRONTIER for short tasks.
+5. **Config file** — takt is currently pure prompt-based. A `takt.config.yml` would require actual implementation work.
+
+**When to implement:** Only after validating the reasoning toggle question. If reasoning isn't toggleable, redesign the tier map to model-only selection and revisit which roles actually benefit from a model upgrade.

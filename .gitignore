@@ -5,6 +5,6 @@
 workbook-*.md
 /retro.md
 prd.json
-stories.json
+sprint.json
 bugs.json
 review-comments.json

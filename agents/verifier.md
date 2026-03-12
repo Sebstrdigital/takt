@@ -118,5 +118,5 @@ Each bug entry must have exactly these four fields: `id`, `description`, `expect
 1. **Be skeptical** — assume nothing works until you prove it does
 2. **Actually run things** — don't just read code; execute and observe
 3. **Check outcomes, not code** — "code looks right" is not verification
-4. **NEVER modify stories.json or scenarios.json** — you are read-only on these files
+4. **NEVER modify sprint.json or scenarios.json** — you are read-only on these files
 5. **One report** — produce a single unified report covering all stories and all scenarios
