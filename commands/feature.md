@@ -1,13 +1,13 @@
 ---
-name: takt-prd
-description: "Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."
+name: feature
+description: "Generate a Feature doc for a new feature. Use when planning a feature, starting a new project, or when asked to create a Feature. Triggers on: create a feature, write feature for, plan this feature, requirements for, spec out."
 source_id: takt
 version: 2.0.0
 ---
 
-# PRD Generator
+# Feature Generator
 
-Create detailed Product Requirements Documents through a gated what/why/why-not flow using AskUserQuestion checkpoints.
+Create detailed Feature docs through a gated what/why/why-not flow using AskUserQuestion checkpoints.
 
 ---
 
@@ -17,10 +17,10 @@ Create detailed Product Requirements Documents through a gated what/why/why-not 
 2. **Gate: Why** — Confirm motivation and problem
 3. **Gate: What** — Confirm scope and technical decisions
 4. **Gate: What Not** — Confirm explicit exclusions
-5. Write the PRD
-6. **Gate: Review** — Present summary and offer conversion to stories.json
+5. Write the Feature doc
+6. **Gate: Review** — Present summary and offer conversion to sprint.json
 
-**Important:** Do NOT start implementing. Just create the PRD.
+**Important:** Do NOT start implementing. Just create the Feature doc.
 
 ---
 
@@ -80,7 +80,7 @@ If the feature involves genuine technical choices (not ones you can answer from 
 
 Use **AskUserQuestion** to confirm explicit exclusions.
 
-Based on the confirmed scope, present what you're explicitly excluding. This maps directly to the PRD's Non-Goals section.
+Based on the confirmed scope, present what you're explicitly excluding. This maps directly to the Feature doc's Non-Goals section.
 
 ```
 AskUserQuestion:
@@ -95,11 +95,11 @@ AskUserQuestion:
       description: "I'll move items back into scope"
 ```
 
-## Step 5: Write PRD
+## Step 5: Write Feature Doc
 
-Based on the confirmed why/what/what-not, write the PRD. No gate needed — just write it using the confirmed answers.
+Based on the confirmed why/what/what-not, write the Feature doc. No gate needed — just write it using the confirmed answers.
 
-### PRD Structure
+### Feature Doc Structure
 
 #### 1. Introduction/Overview
 Brief description of the feature and the problem it solves.
@@ -189,7 +189,7 @@ Remaining questions or areas needing clarification.
 
 ## Writing for Junior Developers
 
-The PRD reader may be a junior developer or AI agent. Therefore:
+The Feature doc reader may be a junior developer or AI agent. Therefore:
 
 - Be explicit and unambiguous
 - Avoid jargon or explain it
@@ -203,37 +203,37 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 
 - **Format:** Markdown (`.md`)
 - **Location:** `tasks/`
-- **Filename:** `prd-[feature-name].md` (kebab-case)
+- **Filename:** `feature-[feature-name].md` (kebab-case)
 
 ---
 
 ## Step 6: Gate — Review
 
-After writing the PRD, present a summary and use **AskUserQuestion** to offer next steps:
+After writing the Feature doc, present a summary and use **AskUserQuestion** to offer next steps:
 
 ```
 AskUserQuestion:
-  question: "PRD saved to tasks/prd-<name>.md (<N> stories). What next?"
+  question: "Feature doc saved to tasks/feature-<name>.md (<N> stories). What next?"
   header: "Next step"
   options:
-    - label: "Convert to stories.json (Recommended)"
-      description: "Run /takt to generate stories.json + scenarios for autonomous execution"
-    - label: "Review PRD first"
-      description: "I'll open the PRD so you can read through it before converting"
+    - label: "Convert to sprint.json (Recommended)"
+      description: "Run /sprint to generate sprint.json + scenarios for autonomous execution"
+    - label: "Review Feature doc first"
+      description: "I'll open the Feature doc so you can read through it before converting"
     - label: "Done for now"
-      description: "Keep the PRD, I'll convert it later"
+      description: "Keep the Feature doc, I'll convert it later"
 ```
 
 If the user chooses to convert:
-1. Use the `/takt` command
-2. Convert the specified PRD to `stories.json`
+1. Use the `/sprint` command
+2. Convert the specified Feature doc to `sprint.json`
 3. After conversion, suggest: **start takt** (auto-detects sequential vs parallel from waves)
 
 ---
 
 ## Checklist
 
-Before saving the PRD:
+Before saving the Feature doc:
 
 - [ ] Read project CLAUDE.md for context
 - [ ] Confirmed "why" via AskUserQuestion gate
@@ -243,4 +243,4 @@ Before saving the PRD:
 - [ ] Max 3-4 acceptance criteria per story, all behavioral outcomes
 - [ ] Functional requirements are numbered and unambiguous
 - [ ] Non-goals section populated from confirmed exclusions
-- [ ] Saved to `tasks/prd-[feature-name].md`
+- [ ] Saved to `tasks/feature-[feature-name].md`

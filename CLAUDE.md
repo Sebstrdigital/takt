@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is takt?
 
-takt is an autonomous AI agent orchestrator that runs natively inside Claude Code. Primary command: `start takt` (auto-detects sequential vs parallel from stories.json). Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
+takt is an autonomous AI agent orchestrator that runs natively inside Claude Code. Primary command: `start takt` (auto-detects sequential vs parallel from sprint.json). Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
 
 There is no bash script or CLI binary. The user says "start takt" in Claude Code, which reads the unified prompt file and spawns autonomous agents using Claude Code's native Task tool.
 
 Each mode spawns fresh Claude Code agent instances. Memory persists via:
 - **Git history** - commits from previous iterations
-- **stories.json** - tracks which stories are `passes: true/false` (ephemeral, never committed)
+- **sprint.json** - tracks which stories are `passes: true/false` (ephemeral, never committed)
 - **.takt/workbooks/workbook-US-XXX.md** - per-story implementation notes (ephemeral)
 - **.takt/stats.json** - per-project timing stats for ETA estimation (persistent)
 - **.takt/retro.md** - retrospective entries and active alerts
@@ -39,13 +39,13 @@ These phrases trigger prompt file reads, NOT slash commands:
 | `takt debug` | `~/.claude/lib/takt/debug.md` | /takt |
 | `takt retro` | `~/.claude/lib/takt/retro.md` | /takt |
 
-The `/takt` slash command is ONLY for converting PRDs to stories.json. Never route mode commands through it.
+The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. Never route mode commands through it.
 
 **CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
 
 Slash commands (also in Claude Code):
-- `/takt-prd` — generate a PRD from a feature description
-- `/takt` — convert a PRD into executable `stories.json`
+- `/feature` — generate a Feature doc from a feature description
+- `/sprint` — convert a Feature doc into executable `sprint.json`
 - `/tdd` — TDD workflow
 
 Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
@@ -56,7 +56,7 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 
 1. User says "start takt" in Claude Code
 2. The **session agent** reads `~/.claude/lib/takt/run.md`
-3. The session agent reads `stories.json`, detects mode (sequential vs parallel from waves), estimates duration from `.takt/stats.json`, prints a single start line with ETA
+3. The session agent reads `sprint.json`, detects mode (sequential vs parallel from waves), estimates duration from `.takt/stats.json`, prints a single start line with ETA
 4. The session agent orchestrates silently — spawning fresh worker Tasks for each story (Ralph Wiggum pattern)
 5. Workers run autonomously with `mode: "bypassPermissions"` and `run_in_background: true`
 6. No intermediate output — the orchestrator works silently until all phases complete
@@ -71,17 +71,17 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `commands/*.md` -> `~/.claude/commands/` - Slash commands
 
 ### Artifacts
-- `stories.json` — project root, tracks stories and their status (ephemeral, never committed, deleted by retro)
+- `sprint.json` — project root, tracks stories and their status (ephemeral, never committed, deleted by retro)
 - `.takt/workbooks/workbook-US-XXX.md` — ephemeral per-story notes, deleted after retro
 - `.takt/stats.json` — per-project timing stats for ETA estimation (persistent across runs)
 - `.takt/retro.md` — persistent retrospective entries and alerts
 
 ### Slash Commands
-- `/takt` - Convert PRD to `stories.json` format (with waves and dependsOn for team mode)
-- `/takt-prd` - Generate PRDs from feature descriptions
+- `/sprint` - Convert Feature doc to `sprint.json` format (with waves and dependsOn for team mode)
+- `/feature` - Generate Feature docs from feature descriptions
 - `/tdd` - Test-Driven Development workflow
 
-### Story Fields in stories.json
+### Story Fields in sprint.json
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
 - `passes`: `false` -> `true` when story complete
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
@@ -96,6 +96,6 @@ Keep the repo lean. Every markdown file must justify its presence. When creating
 If an `.md` file has served its purpose, remove it. Don't let stale docs accumulate.
 
 ### Team Mode: Waves
-- `waves` top-level field in stories.json groups stories by dependency
+- `waves` top-level field in sprint.json groups stories by dependency
 - Wave N+1 doesn't start until Wave N is fully merged
 - Workers use Claude Code's native `isolation: "worktree"` feature for isolation (platform-managed, no manual worktree commands needed)

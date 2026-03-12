@@ -5,7 +5,7 @@
 #
 # Installed layout:
 #   ~/.claude/lib/takt/             # Agent prompts + supporting files
-#   ~/.claude/commands/             # Slash commands (/takt, /takt-prd, /tdd)
+#   ~/.claude/commands/             # Slash commands (/feature, /sprint, /tdd)
 #   ~/.claude/CLAUDE.md             # takt section appended
 #
 # Safe install logic for commands:
@@ -103,6 +103,13 @@ for old_cmd in dua.md dua-prd.md; do
         echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd"
     fi
 done
+# Remove old takt-prd.md (renamed to feature.md)
+for old_cmd in takt-prd.md; do
+    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ] && grep -q "source_id: $SOURCE_ID" "$CLAUDE_DIR/commands/$old_cmd" 2>/dev/null; then
+        rm -f "$CLAUDE_DIR/commands/$old_cmd"
+        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (renamed)"
+    fi
+done
 # Replace prefixed tdd if old version exists alongside takt version
 if [ -f "$CLAUDE_DIR/commands/takt-tdd.md" ] && [ -f "$CLAUDE_DIR/commands/tdd.md" ]; then
     if grep -q "source_id: dua-loop" "$CLAUDE_DIR/commands/tdd.md" 2>/dev/null; then
@@ -171,16 +178,16 @@ generate_takt_section() {
 **Proactive usage — IMPORTANT:**
 When the user discusses a new feature, significant change, or enters plan mode for non-trivial work (likely 3+ stories), **suggest the takt workflow** instead of implementing inline:
 
-1. "This sounds like it could be X stories — want me to create a PRD with `/takt-prd`?"
-2. After PRD approval: convert to `stories.json` + `.takt/scenarios.json` with `/takt`
-3. Execute with `start takt` (auto-detects sequential vs parallel from stories.json waves)
+1. "This sounds like it could be X stories — want me to create a Feature doc with `/feature`?"
+2. After Feature doc approval: convert to `sprint.json` + `.takt/scenarios.json` with `/sprint`
+3. Execute with `start takt` (auto-detects sequential vs parallel from sprint.json waves)
 
 **Plan-mode interception — IMPORTANT:**
 When the user wants to plan a feature (says "plan this", "I want to build X", or you're about to enter plan mode), use **AskUserQuestion** BEFORE entering native plan mode:
-- **takt PRD** — Structured PRD with gated what/why/why-not flow, stories, acceptance criteria, autonomous execution (`/takt-prd`)
+- **takt Feature** — Structured Feature doc with gated what/why/why-not flow, stories, acceptance criteria, autonomous execution (`/feature`)
 - **Native plan** — Vanilla Claude Code plan mode for simpler or non-story work
 
-If the user picks takt PRD → run `/takt-prd` (which has its own gated flow).
+If the user picks takt Feature → run `/feature` (which has its own gated flow).
 If the user picks native plan → proceed with standard `EnterPlanMode`.
 
 **When NOT to suggest takt:** Simple tasks (single file change, quick fix, one-liner), pure research/exploration, or when the user explicitly wants to implement directly.
@@ -189,17 +196,17 @@ If the user picks native plan → proceed with standard `EnterPlanMode`.
 If the user mentions takt outside of a planning session (no active PRD, no feature discussion in progress), present the available modes:
 
 > Which takt mode do you want to run?
-> - `start takt` — Execute stories (auto-detects sequential/parallel, needs `stories.json`)
+> - `start takt` — Execute stories (auto-detects sequential/parallel, needs `sprint.json`)
 > - `takt debug` — Bug-fixing discipline (needs bug description or `bugs.json`)
 > - `takt retro` — Retrospective from workbooks (needs `workbook-*.md` files)
-> - `/takt-prd` — Start fresh: create a PRD for a new feature
+> - `/feature` — Start fresh: create a Feature doc for a new feature
 
 **Commands:**
 - `start takt` — run stories (auto-detects sequential/parallel from waves)
 - `takt debug` — strict bug-fixing discipline
 - `takt retro` — post-execution retrospective
-- `/takt-prd` — generate PRD from feature description
-- `/takt` — convert PRD to stories.json + .takt/scenarios.json
+- `/feature` — generate Feature doc from feature description
+- `/sprint` — convert Feature doc to sprint.json + .takt/scenarios.json
 - `/tdd` — TDD workflow
 
 **CRITICAL — Agent Type Rule:**

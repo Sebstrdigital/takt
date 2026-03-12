@@ -8,31 +8,31 @@
 
 ---
 
-## Retro: 2026-03-07 — takt/prompt-refactor
+## Retro: 2026-03-12 — takt/scrum-vocabulary-redesign
 
 ### What Went Well
-- **4/4 stories completed, clean execution.** Unified orchestrator (US-001), pointer prompts (US-002), worker scope fix (US-003), and routing/install updates (US-004) all delivered.
-- **All 6 previous action items addressed** — including 2 items that had been carried twice. The prompt-refactor run was purpose-built to resolve the previous retro's findings.
-- **82% prompt reduction**: run.md is ~180 lines vs ~987 combined in the old solo.md + team-lead.md (US-001 workbook). Pointer-based spawns keep worker prompts under 1KB.
-- **No blockers across any story** — all 4 workbooks report zero blockers. The scope was well-defined and the stories were properly decomposed.
-- **Cross-story alignment was tight**: US-001 created run.md assuming workers don't git commit, US-003 made that explicit in worker.md, US-002 verified the pointer pattern, US-004 wired up routing. No conflicts or rework needed.
+- **4/4 stories completed, zero blockers across all workbooks.** Clean execution on a well-scoped rename/restructure run.
+- **install.sh glob loop required no changes for US-003 and US-004**: The existing `for f in commands/*.md` pattern automatically picks up new command files — no manual wiring needed. Demonstrates the value of convention over configuration in install.sh.
+- **Cross-story naming consistency maintained**: US-001 renamed `stories.json` → `sprint.json`, US-002 introduced `/feature` and `/sprint`, US-003 introduced `/epic`, US-004 created `/takt` as the unified entry point — vocabulary chain (Epic → Feature → Sprint) is consistent end-to-end.
+- **Artifact detection hierarchy in US-004 was well-reasoned**: `sprint.json` > `tasks/feature-*.md` > `tasks/epic-*.md` > none, preventing the user from being pushed backward in the flow if they've already progressed further.
 
 ### What Didn't Go Well
-- **No negative patterns observed this run.** All stories completed without blockers or workarounds. The run was scoped to markdown-only changes in a prompt-only repo, which is the ideal case for takt.
+- **No negative patterns this run.** All 4 workbooks report zero blockers. Scope was well-defined markdown-only changes — the ideal case for takt.
 
 ### Patterns Observed
-- **Retro-driven PRDs produce focused runs**: Every story in this run traced directly to a previous retro action item or alert. The retro-to-PRD pipeline generated a clean, no-waste backlog.
-- **Prompt-only repos remain the fast path**: 6th consecutive retro confirming this. All stories are markdown edits, all complete quickly, no build/test overhead.
-- **Session-agent-as-orchestrator is now canonical**: US-001 formally codified the pattern discovered in the previous run. The intermediary orchestrator layer is eliminated.
-- **Backward compatibility preserved**: US-002 kept embedded-diff fallback in reviewer.md; US-004 kept `takt solo`/`takt team` as deprecated aliases. No breaking changes.
+- **Scrum vocabulary redesign was a coordinated multi-file rename**: US-001 required updating 14+ source files plus installed copies. Having workers handle both source and installed copies in the same story avoided a second pass.
+- **Old command files left in repo (takt-prd.md, takt.md-old) with deferred cleanup**: US-002 notes that `commands/takt-prd.md` still exists in the repo as a historical source. Post-merge cleanup may be needed.
+- **Prompt-only repos remain the fast path**: 7th consecutive retro confirming this. No build/test overhead, all stories complete quickly.
+- **Entry-point wrapper pattern (US-004) as a UX improvement**: `/takt` as a context-aware entry point that detects existing artifacts and presents targeted options is a strong UX pattern — applicable to future multi-step workflows.
 
 ### Action Items
-- [ ] Run `./install.sh` to deploy run.md and updated prompts to `~/.claude/lib/takt/`
-- [x] Delete `lib/solo.md` and `lib/team-lead.md` from the repo (run.md replaces them)
-- [ ] Verify `start takt` end-to-end on a real project to confirm the unified orchestration works
+- [ ] [carried 1x] Run `./install.sh` to deploy updated prompts to `~/.claude/lib/takt/` (updated files were deployed manually this run, but install.sh should be re-run to ensure consistency)
+- [ ] [carried 1x] Verify `start takt` end-to-end on a real project to confirm the unified orchestration works
+- [ ] Delete `commands/takt-prd.md` from the repo — replaced by `commands/feature.md`, no longer needed as a source file
 
 ### Metrics
 - Stories completed: 4/4
 - Stories blocked: 0
 - Total workbooks: 4
-- Previous action items addressed: 6/6 (including 2 carried-2x items)
+- Previous action items carried: 2 (install.sh deploy, end-to-end verification)
+- Previous action items addressed: 0 (neither was addressed this run)

@@ -6,7 +6,7 @@ All notable improvements to takt are documented here. Managed by the retro agent
 - 2026-03-07: Fix install.sh CLAUDE.md replacement — awk multi-line string bug silently skipped section updates, replaced with sed+append
 - 2026-03-07: Add silent execution — orchestrator prints only start line (with ETA) and final report, no intermediate output
 - 2026-03-07: Add per-project timing stats (.takt/stats.json) — retro computes per-size averages and phase overhead, orchestrator uses them for ETA
-- 2026-03-07: Fix stories.json lifecycle — never committed, treated as ephemeral run artifact deleted by retro
+- 2026-03-07: Fix sprint.json lifecycle — never committed, treated as ephemeral run artifact deleted by retro
 - 2026-03-07: Mitigate intermediary orchestrator failure — session agent is now the orchestrator via unified run.md
 - 2026-03-07: Mitigate prompt bloat — pointer-based agent spawns replace 9KB embedded prompts (82% reduction)
 - 2026-03-07: Mitigate worker git commit failures — workers scoped to file edits only, session agent owns git
@@ -21,7 +21,7 @@ All notable improvements to takt are documented here. Managed by the retro agent
 - 2026-03-02: Resolve alert — Opus too slow for worker agents (3 clean retros, Sonnet default holds)
 - 2026-03-02: Resolve alert — Workbook generation inconsistent across workers (3 clean retros, consistent quality confirmed)
 - 2026-03-02: Resolve alert — Stale workbooks accumulate across runs (retention policy enforced, cleanup reliable)
-- 2026-03-02: Add `knownIssues` field to stories.json schema — workers skip pre-existing failures instead of wasting time diagnosing them
+- 2026-03-02: Add `knownIssues` field to sprint.json schema — workers skip pre-existing failures instead of wasting time diagnosing them
 - 2026-03-02: Enforce workbook verification in team-lead.md merge planning — team lead must confirm workbook exists before merging
 - 2026-03-02: Document solo mode parallel execution behavior — clarify that independent stories run concurrently
 - 2026-02-22: Add agent type safety rule to install script — survives reinstalls as source of truth
