@@ -177,7 +177,7 @@ Any unresolved questions that need answers before or during delivery.
 
 ---
 
-## Step 6: Gate — Review
+## Step 6: Gate — Review & Automatic Feature Loop
 
 After writing the Epic doc, present a summary and use **AskUserQuestion** to offer next steps:
 
@@ -186,18 +186,42 @@ AskUserQuestion:
   question: "Epic doc saved to tasks/epic-<name>.md (<N> Features). What next?"
   header: "Next step"
   options:
-    - label: "Proceed to /feature (Recommended)"
-      description: "Start defining the first Feature in detail — run /feature to create a Feature doc for F-1"
+    - label: "Start Feature Planning (Recommended)"
+      description: "I'll loop through all Features and create Feature docs for F-1, F-2, etc. — each with the full why/what/what-not interview"
     - label: "Review Epic doc first"
       description: "I'll open the Epic doc so you can read through it before moving to Feature planning"
     - label: "Done for now"
       description: "Keep the Epic doc, I'll plan Features later"
 ```
 
-If the user chooses to proceed to `/feature`:
-1. Invoke the `/feature` skill
-2. Pass the first unplanned Feature (F-1) as context
-3. The Feature flow will handle the full what/why/why-not gated interview
+### If the user chooses "Start Feature Planning":
+
+1. For each Feature in the confirmed Feature breakdown (F-1, F-2, ... F-N):
+   - Invoke the `/feature` skill with context about which Feature is being planned
+   - **Wait for the Feature doc to be written** (the skill will return after the Feature doc is saved)
+   - Do NOT proceed to the next Feature until the current one's doc is saved
+2. After all Feature docs are written:
+   - Collect the filenames of all created Feature docs (e.g., `feature-auth-flow.md`, `feature-user-profiles.md`)
+   - Present a summary showing all Feature docs created
+   - Use **AskUserQuestion** to offer handoff to `/sprint`:
+
+   ```
+   AskUserQuestion:
+     question: "Feature planning complete. I've created Feature docs for all <N> Features. What next?"
+     header: "Planning complete"
+     options:
+       - label: "Merge Features into sprint.json"
+         description: "Run /sprint to combine all Feature docs into a single sprint.json with scenarios"
+       - label: "Review Feature docs first"
+         description: "I'll open each Feature doc so you can review before converting to sprint"
+       - label: "Done for now"
+         description: "Keep the Feature docs, I'll convert to sprint later"
+   ```
+
+   If the user chooses to merge: invoke `/sprint` with all Feature doc filenames
+
+### If the user chooses "Review Epic doc first" or "Done for now":
+- Proceed as before (user will manually invoke `/feature` later, or end the flow)
 
 ---
 
