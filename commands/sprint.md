@@ -37,7 +37,7 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
       ],
       "priority": 1,
       "size": "small",
-      "complexity": "simple",
+      "complexity": "complex",
       "passes": false,
       "verify": "inline",
       "startTime": "",
