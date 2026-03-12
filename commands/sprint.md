@@ -150,6 +150,8 @@ This keeps verification thorough where it matters without burning tokens on simp
 
 When the Feature doc has 6+ stories with 2+ independent dependency chains, add wave planning for parallel execution.
 
+**In multi-doc mode:** Waves are computed from the **combined** `dependsOn` graph across ALL stories from ALL Feature docs — not per-Feature-doc. After ID renumbering (see ID Renumbering section), a story from `feature-notifications.md` renumbered to US-004 can depend on US-002 from `feature-dark-mode.md`, and the wave planner treats them as one unified graph.
+
 ### dependsOn Field
 
 Each story can have a `dependsOn` array listing story IDs it requires:
@@ -614,7 +616,7 @@ Before writing sprint.json, verify:
 - [ ] **Complexity assigned** to each story (`"simple"` or `"complex"`, default `"complex"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
-- [ ] **waves** computed if 6+ stories with independent chains
+- [ ] **waves** computed if 6+ stories with independent chains (in multi-doc mode: computed from the combined cross-Feature graph after ID renumbering)
 - [ ] **scenarios.json** generated at `.takt/scenarios.json` with 2-5 BDD scenarios per story
 - [ ] **knownIssues** populated for stories affected by pre-existing failures (empty array if none)
 
