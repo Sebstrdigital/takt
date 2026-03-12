@@ -35,7 +35,7 @@ For each incomplete story (priority order):
 1. **Check deps** — skip if any `dependsOn` story has `passes: false`
 2. **Record start time** — `jq` to set `.startTime`
 3. **Spawn worker** with a lean prompt (see Worker Prompt Template below)
-   - `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
+   - `subagent_type: "general-purpose"`, `model: "haiku"` if story has `complexity: "simple"`, otherwise `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
 4. **Wait** for worker to complete
 5. **Git commit** — the session agent commits the worker's changes:
    ```bash
@@ -54,7 +54,7 @@ Independent stories (no unmet deps) may be spawned in parallel even in sequentia
 
 1. **Create team** via `TeamCreate`
 2. For each wave (in order):
-   a. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`
+   a. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`, using `model: "haiku"` if the story has `complexity: "simple"`, otherwise `model: "sonnet"`
    b. Wait for all workers in the wave to complete
    c. **Merge** each worktree one at a time:
       ```bash
