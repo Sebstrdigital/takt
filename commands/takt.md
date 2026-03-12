@@ -141,19 +141,42 @@ AskUserQuestion:
 Once the user answers all three:
 
 1. **Synthesize the answers** into a feature description (no file saved — this is ephemeral).
-2. **Generate sprint.json** directly at the project root using the same rules as `/sprint`:
+2. **Estimate story count** from the "what" scope:
+   - Break the "what" into right-sized user stories (as you would for `/sprint`)
+   - Count the total stories
+   - If count > 5, present a warning to the user and offer two paths:
+     ```
+     ⚠️  Quick path estimate: X stories (recommended max for quick path: 5).
+         Large scope is better handled with a full Feature doc so you can review and refine the scope.
+
+         How would you like to proceed?
+     ```
+     Then use **AskUserQuestion**:
+     ```
+     AskUserQuestion:
+       question: "Quick path estimate: X stories. How would you like to proceed?"
+       header: "Story count too large for quick path"
+       options:
+         - label: "Continue with quick path anyway"
+           description: "Generate sprint.json + scenarios.json now (X stories, may be large for one sprint)"
+         - label: "Save as Feature doc instead"
+           description: "I'll save your answers as a Feature doc for review and planning"
+     ```
+     If the user chooses "Continue": proceed to step 3.
+     If the user chooses "Save as Feature doc": write a Feature doc to `tasks/feature-[slug].md` based on the answers (using the same format as `/feature` generates) and present summary without generating sprint.json. Exit after the Feature doc is written — do NOT generate sprint.json.
+3. **Generate sprint.json** directly at the project root using the same rules as `/sprint`:
    - Break the "what" into right-sized user stories
    - Apply dependency ordering, type, size, complexity, verify fields
    - Set `branchName` from a kebab-case slug of the feature description
    - Use the "why" to write story descriptions and acceptance criteria
    - Use the "what not" to exclude scope that might otherwise creep in
-3. **Generate `.takt/scenarios.json`** alongside sprint.json (same rules as `/sprint`).
-4. **Do NOT create a Feature doc** — no `tasks/feature-*.md` artifact is saved.
-5. **Present the summary and offer to start**, same as `/sprint` does after conversion:
+4. **Generate `.takt/scenarios.json`** alongside sprint.json — ALWAYS required, never skipped (same rules as `/sprint`).
+5. **Do NOT create a Feature doc** — no `tasks/feature-*.md` artifact is saved (UNLESS the user chose the Feature doc path above).
+6. **Present the summary and offer to start**, same as `/sprint` does after conversion:
 
 ```
 ✅ sprint.json ready! (Quick path — no Feature doc created)
-✅ .takt/scenarios.json generated
+✅ .takt/scenarios.json generated (always required, quality gate never skipped)
 
 Branch: takt/[feature-slug]
 Stories: X total (Y small, Z medium, W large)
@@ -164,6 +187,21 @@ Would you like me to start the takt?
 ```
 
 If the user says yes: say `start takt`.
+
+**If the user chose the Feature doc path** (when story count > 5), the output is different:
+
+```
+✅ Feature doc created!
+
+Saved to: tasks/feature-[slug].md
+
+This Feature doc can now be:
+1. Reviewed and refined before conversion
+2. Converted to sprint.json later with /sprint when ready
+3. Used for wider team planning and discussion
+```
+
+In this case, exit after presenting the Feature doc location. Do NOT generate sprint.json or scenarios.json on this path.
 
 ---
 
@@ -187,7 +225,10 @@ Each gate uses **AskUserQuestion** so the user is always in control of when to a
 - [ ] Presented the correct case (A/B/C/D) based on what was found
 - [ ] Case D included both "Quick path" and "Full flow" options
 - [ ] Quick path asked all 3 interview questions (why/what/what-not) in a single prompt
-- [ ] Quick path generated sprint.json + .takt/scenarios.json without creating a Feature doc artifact
+- [ ] Quick path estimates story count AFTER user answers all 3 questions
+- [ ] Quick path warns if story count > 5 and offers choice: continue or save as Feature doc
+- [ ] Quick path generates sprint.json + .takt/scenarios.json without creating a Feature doc artifact (unless user chose Feature doc path)
+- [ ] .takt/scenarios.json is ALWAYS generated on quick path (never skipped, mandatory quality gate)
 - [ ] Used AskUserQuestion for all state-presentation gates
 - [ ] Did not bypass downstream skill gates (`/epic`, `/feature`, `/sprint` handle their own flow)
 - [ ] Each transition offered a "start over" or "go back" path
