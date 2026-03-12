@@ -37,6 +37,7 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
       ],
       "priority": 1,
       "size": "small",
+      "complexity": "complex",
       "passes": false,
       "verify": "inline",
       "startTime": "",
@@ -162,6 +163,39 @@ Each story has a `size` field used for progress tracking and ETA estimation. tak
 
 ---
 
+## Story Complexity: Model Tier Routing
+
+Each story has a `complexity` field used to route it to the appropriate model tier. This is a **cost-efficiency** feature — simple stories don't need a powerful model.
+
+**Values:** `"simple"` | `"complex"`
+
+**Default: `"complex"`** — Stories without a complexity field are treated as complex. When in doubt, use `"complex"`.
+
+### Auto-Classification Rules
+
+**Assign `"simple"` when ALL of the following are true:**
+- Single file change (one file to create or modify)
+- Deterministic output (the change is obvious, no judgment calls)
+- No cross-file reasoning (no need to understand how multiple modules interact)
+
+**Assign `"complex"` when ANY of the following is true:**
+- Multiple files need coordinated changes
+- Logic decisions required (branching logic, data transformation, state management)
+- Integration points (API calls, database queries, cross-module dependencies)
+
+### Borderline Examples
+
+| Story | Classification | Reason |
+|-------|---------------|--------|
+| "Add a `color` field to a config constant file" | `"simple"` | One file, no logic, no cross-file impact |
+| "Update a UI label string in a single component" | `"simple"` | One file, deterministic, purely cosmetic |
+| "Add a CSS class to a single component" | `"simple"` | One file, no logic reasoning needed |
+| "Add a new route handler that calls an existing service" | `"complex"` | Multiple files (route + service), integration point |
+| "Rename a function used in 3 files" | `"complex"` | Multiple files, cross-file reasoning required |
+| "Add a form field with client-side validation" | `"complex"` | UI + validation logic = multiple concerns |
+
+---
+
 ## Story Scope: The Number One Rule
 
 **Each story must be completable in ONE takt iteration (one context window).**
@@ -252,11 +286,12 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 7. **Type assignment**: Assign `"logic"`, `"ui"`, or `"hybrid"` based on story content (see Story Type section)
 8. **Verify assignment**: Set `"verify": "deep"` for the final story, complex stories, and security-sensitive stories; otherwise `"verify": "inline"`
 10. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
-11. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
-12. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
-13. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
-14. **Scenario generation**: After writing sprint.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
-15. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
+11. **Complexity assignment**: Assign `"simple"` or `"complex"` based on auto-classification rules (see Story Complexity section). Default to `"complex"` when uncertain.
+12. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
+13. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
+14. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
+15. **Scenario generation**: After writing sprint.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
+16. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
 
 ---
 
@@ -313,6 +348,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 1,
       "size": "small",
+      "complexity": "complex",
       "passes": false,
       "verify": "inline",
       "startTime": "",
@@ -331,6 +367,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 2,
       "size": "small",
+      "complexity": "simple",
       "passes": false,
       "verify": "inline",
       "startTime": "",
@@ -350,6 +387,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 3,
       "size": "medium",
+      "complexity": "complex",
       "passes": false,
       "verify": "inline",
       "startTime": "",
@@ -368,6 +406,7 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 4,
       "size": "medium",
+      "complexity": "complex",
       "passes": false,
       "verify": "deep",
       "startTime": "",
@@ -387,6 +426,7 @@ Note:
 - **Type assignments:** US-001 is `"logic"` (database), US-002/US-004 are `"ui"` (visual), US-003 is `"hybrid"` (UI + save logic). All types use direct implementation; BDD scenarios are the verification layer.
 - US-004 has `"verify": "deep"` because it's the **final story** — gets independent verification before completion
 - Size assignments: US-001, US-002 are `"small"` (single concern), US-003, US-004 are `"medium"` (multiple files/logic)
+- **Complexity assignments:** US-001 is `"complex"` (migration touches schema + migration file), US-002 is `"simple"` (adds a badge to one component, no logic), US-003/US-004 are `"complex"` (multiple files, logic decisions, integration points)
 
 ---
 
@@ -502,6 +542,7 @@ Before writing sprint.json, verify:
 - [ ] **Type assigned** to each story (`"logic"`, `"ui"`, or `"hybrid"` for categorization)
 - [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for final story and complex/security stories)
 - [ ] **Size assigned** to each story (`"small"`, `"medium"`, or `"large"`)
+- [ ] **Complexity assigned** to each story (`"simple"` or `"complex"`, default `"complex"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
 - [ ] **waves** computed if 6+ stories with independent chains
