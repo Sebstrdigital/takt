@@ -228,8 +228,7 @@ cd takt && git pull && ./install.sh
 |   |-- takt.md               # /takt -- planning entry point (Epic → Feature → Sprint → start takt)
 |   |-- epic.md               # /epic -- define a high-level Epic
 |   |-- feature.md            # /feature -- generate Feature doc
-|   |-- sprint.md             # /sprint -- convert Feature doc to sprint.json
-|   +-- tdd.md                # /tdd -- TDD workflow
+|   +-- sprint.md             # /sprint -- convert Feature doc to sprint.json
 +-- CLAUDE.md                 # takt section appended
 ```
 

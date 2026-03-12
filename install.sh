@@ -110,14 +110,13 @@ for old_cmd in takt-prd.md; do
         echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (renamed)"
     fi
 done
-# Replace prefixed tdd if old version exists alongside takt version
-if [ -f "$CLAUDE_DIR/commands/takt-tdd.md" ] && [ -f "$CLAUDE_DIR/commands/tdd.md" ]; then
-    if grep -q "source_id: dua-loop" "$CLAUDE_DIR/commands/tdd.md" 2>/dev/null; then
-        rm -f "$CLAUDE_DIR/commands/tdd.md"
-        mv "$CLAUDE_DIR/commands/takt-tdd.md" "$CLAUDE_DIR/commands/tdd.md"
-        echo -e "  ${YELLOW}replaced${NC} tdd.md (old dua-loop version)"
+# Remove tdd.md (TDD workflow dropped — BDD scenarios are the quality gate)
+for old_cmd in tdd.md takt-tdd.md; do
+    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ]; then
+        rm -f "$CLAUDE_DIR/commands/$old_cmd"
+        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (TDD workflow dropped)"
     fi
-fi
+done
 # Remove old dua-loop section from CLAUDE.md if takt section also present
 if [ -f "$CLAUDE_MD" ] && grep -q "dua-loop - Autonomous Agent Loop" "$CLAUDE_MD" 2>/dev/null; then
     sed -i '' '/## dua-loop - Autonomous Agent Loop/,/## takt/{ /## takt/!d; }' "$CLAUDE_MD"
@@ -207,7 +206,6 @@ If the user mentions takt outside of a planning session (no active PRD, no featu
 - `takt retro` — post-execution retrospective
 - `/feature` — generate Feature doc from feature description
 - `/sprint` — convert Feature doc to sprint.json + .takt/scenarios.json
-- `/tdd` — TDD workflow
 
 **CRITICAL — Agent Type Rule:**
 When launching any takt mode (`start takt`, `takt debug`, etc.), you MUST:

@@ -46,7 +46,6 @@ The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. 
 Slash commands (also in Claude Code):
 - `/feature` — generate a Feature doc from a feature description
 - `/sprint` — convert a Feature doc into executable `sprint.json`
-- `/tdd` — TDD workflow
 
 Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 
@@ -79,7 +78,6 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 ### Slash Commands
 - `/sprint` - Convert Feature doc to `sprint.json` format (with waves and dependsOn for team mode)
 - `/feature` - Generate Feature docs from feature descriptions
-- `/tdd` - Test-Driven Development workflow
 
 ### Story Fields in sprint.json
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
