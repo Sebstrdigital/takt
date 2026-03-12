@@ -188,7 +188,7 @@ Triggered automatically after each run completes. The value of retros compounds 
 
 | File | Purpose | Created by | Visible to |
 |------|---------|------------|------------|
-| `sprint.json` | Stories, waves, dependencies, verification modes, and per-story complexity hints (`"simple"` or `"complex"` — metadata for future model-tier routing, not yet active) — ephemeral, never committed | `/takt` command + human review | Session agent, workers |
+| `sprint.json` | Stories, waves, dependencies, verification modes, and per-story complexity (`"simple"` or `"complex"` — controls worker model selection: Haiku for simple, Sonnet for complex) — ephemeral, never committed | `/takt` command + human review | Session agent, workers |
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
 | `.takt/review.diff` | Unified diff for code review (ephemeral) | Session agent | Reviewer only |
 | `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Session agent, fix workers |

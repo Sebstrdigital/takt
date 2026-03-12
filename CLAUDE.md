@@ -41,7 +41,7 @@ These phrases trigger prompt file reads, NOT slash commands:
 
 The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. Never route mode commands through it.
 
-**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
+**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` for all spawned Tasks. Workers use `model: "haiku"` or `model: "sonnet"` depending on the story's `complexity` field; the Merge Strategist uses `model: "opus"`; all other agents (verifier, reviewer, etc.) use `model: "sonnet"`. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
 
 Slash commands (also in Claude Code):
 - `/feature` — generate a Feature doc from a feature description
@@ -85,7 +85,7 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
 - `passes`: `false` -> `true` when story complete
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
-- `complexity`: `"simple"` or `"complex"` — metadata for future model-tier routing (not yet active; all workers currently run on Sonnet)
+- `complexity`: `"simple"` or `"complex"` — controls worker model selection. Simple stories use Haiku; complex stories use Sonnet. All other agents (verifier, reviewer, retro, debug, bug-fix workers) use Sonnet.
 
 ## Markdown File Hygiene
 
@@ -95,6 +95,19 @@ Keep the repo lean. Every markdown file must justify its presence. When creating
 - **Keep only what's active**: prompt files (`lib/`, `commands/`, `agents/`), `CHANGELOG.md`, `CLAUDE.md`, `README.md`, `future-improvements.md`, and `.takt/retro.md`.
 
 If an `.md` file has served its purpose, remove it. Don't let stale docs accumulate.
+
+### Model Matrix
+
+| Role | Model | When |
+|------|-------|------|
+| Orchestrator | opus (inherited from session) | Always |
+| Worker (complex) | sonnet | Per story |
+| Worker (simple) | haiku | Per story, complexity: "simple" |
+| Verifier | sonnet | Per run, after all stories pass |
+| Reviewer | sonnet | Per run, after verification |
+| Bug-fix worker | sonnet | Per bug, in verify-fix loop |
+| Retro agent | sonnet | Per run, end of sprint |
+| Merge Strategist | opus | Once per wave, parallel mode only |
 
 ### Team Mode: Waves
 - `waves` top-level field in sprint.json groups stories by dependency
