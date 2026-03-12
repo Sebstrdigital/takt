@@ -116,8 +116,10 @@ Each story needs:
 ##### Story Scope
 
 - **Prefer fewer stories with broader scope** over many tiny stories. A single story can touch 3-4 files — that's fine.
-- **Aim for 3-5 stories** for most features, not 7-10.
+- **Aim for 4-8 stories** when a Feature doc is converted by `/sprint`. If your Feature would produce fewer than 3 stories, consider rolling it into a sibling Feature instead.
 - **Roll ancillary work into the story that needs it.** If a story requires a config file, migration, or doc update, that's part of the story — not a separate story.
+
+**IMPORTANT: Story decomposition is `/sprint`'s job, not the Feature doc's job.** Feature docs describe what the user will experience (the initiative scope, goals, and user-visible outcomes). `/sprint` is responsible for breaking that down into implementable stories. Never write a Feature doc that describes individual implementation tasks — always think at the initiative level. If you find yourself writing "Add a column to X table" or "Create a migration file," you're writing too small. Zoom out to the user-visible behavior: "Users can now filter by status."
 
 ##### Acceptance Criteria Rules
 
@@ -187,6 +189,78 @@ Remaining questions or areas needing clarification.
 
 ---
 
+## Example: Feature at Initiative Scope
+
+Here's an example of a Feature doc written at the right scope — describing a cohesive initiative that produces 4-5 stories when converted by `/sprint`:
+
+### Feature: User Task Filtering and Sorting
+
+**Introduction:** Users currently view all tasks in a flat list with no way to filter by status or priority. This Feature adds filtering (by status, priority, assignee) and sorting (by due date, priority) so users can focus on what matters right now.
+
+**Goals:**
+- Users can filter tasks by status (pending, in progress, done)
+- Users can filter by priority level
+- Users can sort by due date or priority
+- Filter and sort selections persist across page refreshes
+
+**User Stories:**
+
+#### US-001: Filter tasks by status
+**Description:** As a user, I want to filter my task list by status so that I can see only pending or in-progress work.
+
+**Acceptance Criteria:**
+- [ ] A filter dropdown in the task list shows status options: All, Pending, In Progress, Done
+- [ ] When a status is selected, only tasks with that status are displayed
+- [ ] The selected filter persists when the page is refreshed
+
+#### US-002: Filter tasks by priority
+**Description:** As a user, I want to filter tasks by priority level so that I can focus on high-impact work first.
+
+**Acceptance Criteria:**
+- [ ] A filter dropdown shows priority options: All, Low, Medium, High
+- [ ] When a priority is selected, only tasks matching that priority are shown
+- [ ] Multiple priority levels can be selected simultaneously (checkbox-style)
+
+#### US-003: Sort tasks by due date and priority
+**Description:** As a user, I want to sort my tasks by due date or priority so that I can plan my day efficiently.
+
+**Acceptance Criteria:**
+- [ ] A "Sort by" dropdown offers options: Due Date (earliest first), Priority (highest first), Name
+- [ ] When a sort order is selected, the task list reorders immediately
+- [ ] The sort preference persists across page refreshes
+
+#### US-004: Clear filters and reset view
+**Description:** As a user, I want a quick way to clear all active filters so that I can return to the full task view with one click.
+
+**Acceptance Criteria:**
+- [ ] A "Clear all" button appears when any filter is active
+- [ ] Clicking it resets all filters and sort to defaults (All statuses, All priorities, default sort)
+- [ ] The button is disabled when no filters are active
+
+#### US-005: Combine filters and sorting
+**Description:** As a user, I want filters and sorting to work together so that I can find high-priority work due this week.
+
+**Acceptance Criteria:**
+- [ ] When multiple filters and a sort are active, tasks are shown that match ALL active filters, then sorted by the selected order
+- [ ] The UI clearly shows which filters and sort are active (badge count or highlight)
+
+**Functional Requirements:**
+- FR-1: Filter state (status, priority, sort) is stored in browser localStorage
+- FR-2: Queries that yield 0 results display a helpful message: "No tasks match your filters"
+- FR-3: Filter UI is responsive and works on mobile
+
+**Non-Goals:**
+- Saving named filter presets
+- Complex filter logic (AND vs OR combinations)
+- Filtering by assignee or tags (future feature)
+- Custom sort orders
+
+---
+
+**Why this is the right scope:** This Feature describes a cohesive initiative (task filtering and sorting) from the user's perspective. It produces 5 stories when `/sprint` decomposes it. Each story is independently verifiable and could be completed in one sprint cycle. The Feature doc *doesn't* describe implementation tasks (like "add a filter column to the database schema"). That's `/sprint`'s job.
+
+---
+
 ## Writing for Junior Developers
 
 The Feature doc reader may be a junior developer or AI agent. Therefore:
@@ -239,7 +313,7 @@ Before saving the Feature doc:
 - [ ] Confirmed "why" via AskUserQuestion gate
 - [ ] Confirmed "what" (scope) via AskUserQuestion gate
 - [ ] Confirmed "what not" (exclusions) via AskUserQuestion gate
-- [ ] 3-5 stories with broad scope (not 7-10 tiny ones)
+- [ ] Feature targets initiative scope: will produce 4-8 stories when converted by /sprint (if fewer than 3, consider merging with a sibling Feature)
 - [ ] Max 3-4 acceptance criteria per story, all behavioral outcomes
 - [ ] Functional requirements are numbered and unambiguous
 - [ ] Non-goals section populated from confirmed exclusions

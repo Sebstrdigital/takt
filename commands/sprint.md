@@ -11,6 +11,73 @@ Converts existing Feature docs to the sprint.json format that takt uses for auto
 
 ---
 
+## Invocation Modes
+
+### Single-doc mode (explicit argument)
+
+When invoked with a specific Feature doc path (e.g. `/sprint tasks/feature-dark-mode.md`), convert that one Feature doc to `sprint.json`. This is the original behaviour — unchanged.
+
+### Multi-doc mode (no argument)
+
+When invoked **without** a specific Feature doc argument (e.g. the user just says `/sprint` or "convert my features to sprint.json"), execute the multi-doc detection flow:
+
+1. **Scan** `tasks/` for all files matching `feature-*.md` (alphabetical order).
+2. **Present the list** to the user:
+   ```
+   Found 3 Feature docs in tasks/:
+     1. feature-dark-mode.md
+     2. feature-notifications.md
+     3. feature-user-profile.md
+
+   Merge all into one sprint.json? [yes / no / select subset]
+   ```
+3. **Wait for confirmation.** If the user says no or selects a subset, adjust accordingly.
+4. **If confirmed**, process each Feature doc in alphabetical filename order, collecting all stories.
+5. **Renumber IDs globally** — see ID Renumbering section below.
+6. **Compute a single wave plan** across all stories from all docs — see Wave Planning section.
+7. **Write sprint.json** and `.takt/scenarios.json`.
+8. **Print a merge summary** — see Merge Summary section.
+
+**Story count warning:** If the combined story count would exceed 15 stories, warn the user before proceeding:
+```
+⚠️  Combined story count: 18 stories (recommended max: 15).
+    Consider splitting into multiple sprints by running /sprint with a subset of Feature docs.
+    Continue anyway? [yes / no]
+```
+
+---
+
+## ID Renumbering
+
+When merging multiple Feature docs, story IDs must be globally unique across the combined `userStories` array.
+
+**Rules:**
+
+1. Process Feature docs in alphabetical filename order.
+2. The first Feature doc's stories keep their original IDs (e.g. US-001, US-002, US-003).
+3. Each subsequent Feature doc's stories are renumbered starting from the next available ID after the last assigned ID.
+4. All `dependsOn` references **within each Feature doc** are updated to the renumbered IDs before insertion into the combined array.
+
+**Example:**
+- `feature-dark-mode.md` has US-001, US-002, US-003 → kept as US-001, US-002, US-003
+- `feature-notifications.md` has US-001, US-002 → renumbered to US-004, US-005 (dependsOn references updated)
+- `feature-user-profile.md` has US-001, US-002, US-003 → renumbered to US-006, US-007, US-008
+
+---
+
+## Merge Summary
+
+After writing sprint.json, print a merge summary before the standard "sprint.json ready" output:
+
+```
+Merged 3 Feature docs:
+  feature-dark-mode.md     3 stories → US-001–US-003 (unchanged)
+  feature-notifications.md  2 stories → US-004–US-005 (renumbered from US-001–US-002)
+  feature-user-profile.md  3 stories → US-006–US-008 (renumbered from US-001–US-003)
+```
+
+---
+
 ## The Job
 
 Take a Feature doc (markdown file or text) and convert it to `sprint.json` in the project root.
@@ -82,6 +149,8 @@ This keeps verification thorough where it matters without burning tokens on simp
 ## Wave Planning (Team Mode)
 
 When the Feature doc has 6+ stories with 2+ independent dependency chains, add wave planning for parallel execution.
+
+**In multi-doc mode:** Waves are computed from the **combined** `dependsOn` graph across ALL stories from ALL Feature docs — not per-Feature-doc. After ID renumbering (see ID Renumbering section), a story from `feature-notifications.md` renumbered to US-004 can depend on US-002 from `feature-dark-mode.md`, and the wave planner treats them as one unified graph.
 
 ### dependsOn Field
 
@@ -281,7 +350,7 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 2. **IDs**: Sequential (US-001, US-002, etc.)
 3. **Priority**: Based on dependency order, then document order
 4. **All stories**: `passes: false`
-5. **branchName**: Derive from Feature doc filename, kebab-case, prefixed with `takt/` (e.g., `feature-dark-mode.md` → `takt/dark-mode`)
+5. **branchName**: Derive from Feature doc filename, kebab-case, prefixed with `takt/` (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, derive from the sprint/epic name or prompt the user for a branch name (e.g. `takt/sprint-1` or `takt/<feature-group-name>`).
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 7. **Type assignment**: Assign `"logic"`, `"ui"`, or `"hybrid"` based on story content (see Story Type section)
 8. **Verify assignment**: Set `"verify": "deep"` for the final story, complex stories, and security-sensitive stories; otherwise `"verify": "inline"`
@@ -441,6 +510,8 @@ The Feature doc filename and branchName must match so takt can archive the corre
 - `takt/dark-mode` → looks for `tasks/feature-dark-mode.md`
 - Moves to: `tasks/archive/YYYY-MM-DD-dark-mode/feature-dark-mode.md`
 
+**In multi-doc mode**, the branchName is not derived from a single Feature doc filename. All merged Feature docs are archived on completion — takt archives each doc individually using its own name.
+
 ---
 
 ## Scenario Generation
@@ -532,7 +603,7 @@ Bad scenario (copy-pasted criterion):
 
 Before writing sprint.json, verify:
 
-- [ ] **branchName matches Feature doc filename** (e.g., `feature-dark-mode.md` → `takt/dark-mode`)
+- [ ] **branchName matches Feature doc filename** (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, branchName is confirmed with the user.
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
@@ -545,7 +616,7 @@ Before writing sprint.json, verify:
 - [ ] **Complexity assigned** to each story (`"simple"` or `"complex"`, default `"complex"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
 - [ ] **dependsOn** set for each story (empty array if no dependencies)
-- [ ] **waves** computed if 6+ stories with independent chains
+- [ ] **waves** computed if 6+ stories with independent chains (in multi-doc mode: computed from the combined cross-Feature graph after ID renumbering)
 - [ ] **scenarios.json** generated at `.takt/scenarios.json` with 2-5 BDD scenarios per story
 - [ ] **knownIssues** populated for stories affected by pre-existing failures (empty array if none)
 
@@ -553,8 +624,9 @@ Before writing sprint.json, verify:
 
 ## After Creating sprint.json
 
-Once you have saved `sprint.json` and `.takt/scenarios.json`, present a summary and offer to start the loop:
+Once you have saved `sprint.json` and `.takt/scenarios.json`, present a summary and offer to start the loop.
 
+**Single-doc mode output:**
 ```
 ✅ sprint.json ready!
 ✅ .takt/scenarios.json generated (hidden from workers, used by verifier)
@@ -568,6 +640,28 @@ Stories: X total (Y small, Z medium, W large)
 Would you like me to start the takt?
 This will:
 1. Create the feature branch (takt/feature-name)
+2. Run all stories autonomously
+3. Ask about merge/PR when complete
+```
+
+**Multi-doc mode output** (includes merge summary before the story list):
+```
+✅ sprint.json ready!
+✅ .takt/scenarios.json generated (hidden from workers, used by verifier)
+
+Merged 3 Feature docs:
+  feature-dark-mode.md      3 stories → US-001–US-003 (unchanged)
+  feature-notifications.md  2 stories → US-004–US-005 (renumbered from US-001–US-002)
+  feature-user-profile.md   3 stories → US-006–US-008 (renumbered from US-001–US-003)
+
+Branch: takt/sprint-1
+Stories: 8 total (Y small, Z medium, W large)
+  - US-001: [title] (small, inline)
+  ...
+
+Would you like me to start the takt?
+This will:
+1. Create the feature branch (takt/sprint-1)
 2. Run all stories autonomously
 3. Ask about merge/PR when complete
 ```

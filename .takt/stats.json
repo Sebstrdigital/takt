@@ -1,5 +1,5 @@
 {
-  "runs": 1,
+  "runs": 2,
   "stories": {
     "bySize": {
       "small": { "count": 1, "fastest": 29, "slowest": 29, "avg": 29 },
@@ -7,5 +7,5 @@
     }
   },
   "overhead": { "avg": 0, "count": 0 },
-  "updatedAt": "2026-03-12T00:10:00Z"
+  "updatedAt": "2026-03-12T00:30:00Z"
 }
