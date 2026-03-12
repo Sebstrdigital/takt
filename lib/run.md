@@ -56,13 +56,33 @@ Independent stories (no unmet deps) may be spawned in parallel even in sequentia
 2. For each wave (in order):
    a. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`, using `model: "haiku"` if the story has `complexity: "simple"`, otherwise `model: "sonnet"`
    b. Wait for all workers in the wave to complete
-   c. **Merge** each worktree one at a time:
+   c. **Spawn Merge Strategist** — before merging, spawn a one-shot Opus agent to determine merge order:
+      - Read each story's workbook at `.takt/workbooks/workbook-<STORY-ID>.md`
+      - Build a context packet with: story IDs in the wave, their `dependsOn` relationships, and the workbook summary for each
+      - Spawn with this lean prompt:
+        ```
+        # Merge Strategist
+
+        You are a one-shot merge order advisor. Given a set of stories that completed in parallel,
+        output the optimal order to merge their worktrees to minimise conflicts.
+
+        ## Wave Stories
+        <list of story IDs, dependencies, and workbook summaries>
+
+        ## Instructions
+        Analyse the stories and output ONLY a JSON array of story IDs in the recommended merge order.
+        Example: ["US-002", "US-001", "US-003"]
+        No explanation. No other output. Just the JSON array.
+        ```
+        Config: `subagent_type: "general-purpose"`, `model: "opus"`, `mode: "bypassPermissions"`, `run_in_background: false`
+      - Parse the response as a JSON array of story IDs. If parsing fails or the response is invalid, fall back to priority order.
+   d. **Merge** each worktree in the order returned by the Merge Strategist (or priority order on fallback), one at a time:
       ```bash
       git merge takt/<story-id> --no-ff -m "feat: <STORY-ID> - <title>"
       ```
       If conflict: consult the worker agent. Run tests after each merge.
-   d. Verify workbooks exist for every story in the wave
-   e. Update `sprint.json` — set `passes: true` and `endTime` for each merged story
+   e. Verify workbooks exist for every story in the wave
+   f. Update `sprint.json` — set `passes: true` and `endTime` for each merged story
 3. After all waves: proceed to Phase 3
 
 Failure handling: max 2 retries per story. After 2 failures, mark blocked. Dependent stories in later waves are also blocked.

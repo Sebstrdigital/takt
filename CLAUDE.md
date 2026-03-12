@@ -96,6 +96,19 @@ Keep the repo lean. Every markdown file must justify its presence. When creating
 
 If an `.md` file has served its purpose, remove it. Don't let stale docs accumulate.
 
+### Model Matrix
+
+| Role | Model | When |
+|------|-------|------|
+| Orchestrator | opus (inherited from session) | Always |
+| Worker (complex) | sonnet | Per story |
+| Worker (simple) | haiku | Per story, complexity: "simple" |
+| Verifier | sonnet | Per run, after all stories pass |
+| Reviewer | sonnet | Per run, after verification |
+| Bug-fix worker | sonnet | Per bug, in verify-fix loop |
+| Retro agent | sonnet | Per run, end of sprint |
+| Merge Strategist | opus | Once per wave, parallel mode only |
+
 ### Team Mode: Waves
 - `waves` top-level field in sprint.json groups stories by dependency
 - Wave N+1 doesn't start until Wave N is fully merged
