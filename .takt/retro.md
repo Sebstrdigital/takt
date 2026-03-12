@@ -8,31 +8,30 @@
 
 ---
 
-## Retro: 2026-03-12 — takt/scrum-vocabulary-redesign
+## Retro: 2026-03-12 — takt/story-complexity-classification
 
 ### What Went Well
-- **4/4 stories completed, zero blockers across all workbooks.** Clean execution on a well-scoped rename/restructure run.
-- **install.sh glob loop required no changes for US-003 and US-004**: The existing `for f in commands/*.md` pattern automatically picks up new command files — no manual wiring needed. Demonstrates the value of convention over configuration in install.sh.
-- **Cross-story naming consistency maintained**: US-001 renamed `stories.json` → `sprint.json`, US-002 introduced `/feature` and `/sprint`, US-003 introduced `/epic`, US-004 created `/takt` as the unified entry point — vocabulary chain (Epic → Feature → Sprint) is consistent end-to-end.
-- **Artifact detection hierarchy in US-004 was well-reasoned**: `sprint.json` > `tasks/feature-*.md` > `tasks/epic-*.md` > none, preventing the user from being pushed backward in the flow if they've already progressed further.
+- **2/2 stories completed, zero blockers.** Clean, fast run on a well-scoped documentation-only change.
+- **Binary complexity model (simple/complex) chosen over three tiers**: US-001 explicitly rejected a third tier — keeping classification unambiguous and sufficient for model routing. Pragmatic scoping decision.
+- **Default of "complex" is safer**: US-001 documents the default as `"complex"` (safer to over-provision than under-provision), a sensible conservative default that avoids silent quality regressions.
+- **Documentation-only stories are the fastest path**: Both stories were pure markdown changes — no build, no typecheck, no test overhead. Completed with zero friction.
 
 ### What Didn't Go Well
-- **No negative patterns this run.** All 4 workbooks report zero blockers. Scope was well-defined markdown-only changes — the ideal case for takt.
+- **No negative patterns this run.** Both workbooks report zero blockers. Scope was entirely markdown documentation — the ideal case for takt.
 
 ### Patterns Observed
-- **Scrum vocabulary redesign was a coordinated multi-file rename**: US-001 required updating 14+ source files plus installed copies. Having workers handle both source and installed copies in the same story avoided a second pass.
-- **Old command files left in repo (takt-prd.md, takt.md-old) with deferred cleanup**: US-002 notes that `commands/takt-prd.md` still exists in the repo as a historical source. Post-merge cleanup may be needed.
-- **Prompt-only repos remain the fast path**: 7th consecutive retro confirming this. No build/test overhead, all stories complete quickly.
-- **Entry-point wrapper pattern (US-004) as a UX improvement**: `/takt` as a context-aware entry point that detects existing artifacts and presents targeted options is a strong UX pattern — applicable to future multi-step workflows.
+- **Schema-then-docs pattern**: US-001 updated the schema definition (sprint.md command), US-002 updated the user-facing docs (CLAUDE.md, README.md). This two-story decomposition cleanly separates "define the field" from "explain the field."
+- **Prompt-only repos remain the fast path**: 8th consecutive retro confirming this. No build/test overhead, all stories complete quickly.
+- **Three previous action items still unaddressed**: Neither install.sh deployment, end-to-end verification, nor takt-prd.md deletion were addressed this run (out of scope for a documentation sprint).
 
 ### Action Items
-- [ ] [carried 1x] Run `./install.sh` to deploy updated prompts to `~/.claude/lib/takt/` (updated files were deployed manually this run, but install.sh should be re-run to ensure consistency)
-- [ ] [carried 1x] Verify `start takt` end-to-end on a real project to confirm the unified orchestration works
-- [ ] Delete `commands/takt-prd.md` from the repo — replaced by `commands/feature.md`, no longer needed as a source file
+- [ ] [carried 2x] Run `./install.sh` to deploy updated prompts to `~/.claude/lib/takt/` (updated files were deployed manually this run, but install.sh should be re-run to ensure consistency)
+- [ ] [carried 2x] Verify `start takt` end-to-end on a real project to confirm the unified orchestration works
+- [ ] [carried 1x] Delete `commands/takt-prd.md` from the repo — replaced by `commands/feature.md`, no longer needed as a source file
 
 ### Metrics
-- Stories completed: 4/4
+- Stories completed: 2/2
 - Stories blocked: 0
-- Total workbooks: 4
-- Previous action items carried: 2 (install.sh deploy, end-to-end verification)
-- Previous action items addressed: 0 (neither was addressed this run)
+- Total workbooks: 2
+- Previous action items carried: 3 (install.sh deploy carried 2x, end-to-end verification carried 2x, takt-prd.md deletion carried 1x)
+- Previous action items addressed: 0 (documentation sprint — none in scope)
