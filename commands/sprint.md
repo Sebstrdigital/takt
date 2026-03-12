@@ -532,6 +532,6 @@ This will:
 ```
 
 If the user says yes:
-1. Run `takt` (it handles branch creation automatically)
+1. Say `start takt` (it handles branch creation automatically)
 
 **Note:** The user can review sprint.json before starting. This is their last checkpoint before autonomous execution begins.

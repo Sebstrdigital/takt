@@ -226,8 +226,10 @@ cd takt && git pull && ./install.sh
 |   |-- debug.md              # Debug mode agent prompt
 |   +-- retro.md              # Retro mode agent prompt
 |-- commands/
-|   |-- takt.md               # /takt -- convert PRD to sprint.json
-|   |-- takt-prd.md           # /takt-prd -- generate PRD
+|   |-- takt.md               # /takt -- planning entry point (Epic → Feature → Sprint → start takt)
+|   |-- epic.md               # /epic -- define a high-level Epic
+|   |-- feature.md            # /feature -- generate Feature doc
+|   |-- sprint.md             # /sprint -- convert Feature doc to sprint.json
 |   +-- tdd.md                # /tdd -- TDD workflow
 +-- CLAUDE.md                 # takt section appended
 ```
