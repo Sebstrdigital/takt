@@ -41,7 +41,7 @@ These phrases trigger prompt file reads, NOT slash commands:
 
 The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. Never route mode commands through it.
 
-**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
+**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` for all spawned Tasks. Workers use `model: "haiku"` or `model: "sonnet"` depending on the story's `complexity` field; all other agents (verifier, reviewer, etc.) use `model: "sonnet"`. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
 
 Slash commands (also in Claude Code):
 - `/feature` — generate a Feature doc from a feature description
