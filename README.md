@@ -21,8 +21,8 @@ takt runs natively inside Claude Code. There is no CLI binary or bash script —
 
 ```mermaid
 graph TD
-    A["Plan"] -- "/takt-prd" --> B["Scope"]
-    B -- "/takt" --> C["Execute"]
+    A["Plan"] -- "/epic or /feature" --> B["Scope"]
+    B -- "/sprint" --> C["Execute"]
     C --> D["Verify"]
     D -- "PASSED" --> E["Review"]
     D -- "FAILED" --> F["Fix Loop"]
@@ -40,33 +40,32 @@ graph TD
 
 ### Planning Flow
 
-When planning a feature, takt intercepts plan mode to offer a structured PRD flow with gated checkpoints:
+takt uses scrum vocabulary for planning. Start with `/takt` to detect where you are, or jump in at any level:
 
 ```mermaid
 graph TD
-    U["Plan a feature"] --> G{"takt PRD or\nNative plan?"}
-    G -- "takt" --> W["Gate: Why"]
-    G -- "native" --> NP["Plan Mode"]
-    W --> WH["Gate: What"]
-    WH --> WN["Gate: What Not"]
-    WN --> P["Write PRD"]
-    P --> R{"Review"}
-    R -- "convert" --> T["sprint.json"]
-    T --> E["Execute"]
+    U["/takt"] --> D{"Artifacts\nexist?"}
+    D -- "none" --> QP["Quick path\n(3-question interview)"]
+    D -- "none" --> EP["/epic\nFull flow"]
+    D -- "feature docs" --> SP["/sprint\nConvert to sprint.json"]
+    D -- "sprint.json" --> EX["start takt"]
+    EP --> F1["/feature F-1"]
+    F1 --> F2["/feature F-2 ... F-N\n(auto-looped)"]
+    F2 --> SP
+    QP --> EX
+    SP --> EX
 
-    style G fill:#4a3f1a,stroke:#eab308,color:#fde68a
-    style W fill:#4a3f1a,stroke:#eab308,color:#fde68a
-    style WH fill:#4a3f1a,stroke:#eab308,color:#fde68a
-    style WN fill:#4a3f1a,stroke:#eab308,color:#fde68a
-    style R fill:#4a3f1a,stroke:#eab308,color:#fde68a
-    style P fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style T fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
-    style E fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
-    style NP fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
+    style D fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style QP fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style EP fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style F1 fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style F2 fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style SP fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
+    style EX fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
 ```
 
-1. **Plan** — Discuss the feature with Claude. Say "Create the PRD" and Claude generates a structured requirements document using `/takt-prd` with gated checkpoints (Why > What > What Not > Review).
-2. **Scope** — Say "Convert to sprint.json" and Claude converts the PRD into two files: `sprint.json` (visible to workers) and `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier).
+1. **Plan** — Say `/takt` to start. For large initiatives, `/epic` defines the Epic and loops through all Features automatically (Why > What > What Not per Feature). For small changes, the Quick path runs a 3-question interview and goes straight to sprint.json.
+2. **Scope** — Say `/sprint` to convert Feature docs to sprint.json + `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier). `/sprint` can merge multiple Feature docs into one sprint with wave computation.
 3. **Execute** — Say "start takt". The session agent reads `run.md`, auto-detects sequential vs parallel mode from the `waves` field, prints a start line with an ETA (based on per-project timing stats), and orchestrates silently — spawning fresh worker agents for each story. No intermediate output until the final report.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
 5. **Review** — A code reviewer reads the feature branch diff (`.takt/review.diff`) and produces structured feedback. Must-fix issues trigger automated fix workers. Up to 2 review-fix cycles.

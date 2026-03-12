@@ -2,6 +2,9 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-03-12: Add planning flow redesign — /epic auto-loops all Features, /feature scope recalibrated to 4-8 stories, /sprint merges multiple Feature docs with ID renumbering and cross-Feature wave computation, /takt Quick path (3-question why/what/what-not → sprint.json + scenarios.json directly)
+- 2026-03-12: Add role-based model architecture — complexity-based worker routing active (simple → Haiku, complex → Sonnet), Merge Strategist (Opus) spawned once per wave in parallel mode to determine optimal merge order
+
 - 2026-03-07: Clean up stale solo/team references — delete solo.md + team-lead.md, update all commands/prompts to use 'start takt', gitignore ephemeral artifacts
 - 2026-03-07: Fix install.sh CLAUDE.md replacement — awk multi-line string bug silently skipped section updates, replaced with sed+append
 - 2026-03-07: Add silent execution — orchestrator prints only start line (with ETA) and final report, no intermediate output
