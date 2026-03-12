@@ -85,7 +85,7 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `verify`: `"inline"` (self-verified) or `"deep"` (independent verification agent)
 - `passes`: `false` -> `true` when story complete
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
-- `complexity`: `"simple"` or `"complex"` — metadata for future model-tier routing (not yet active; all workers currently run on Sonnet)
+- `complexity`: `"simple"` or `"complex"` — controls worker model selection. Simple stories use Haiku; complex stories use Sonnet. All other agents (verifier, reviewer, retro, debug, bug-fix workers) use Sonnet.
 
 ## Markdown File Hygiene
 
