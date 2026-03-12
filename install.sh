@@ -103,8 +103,8 @@ for old_cmd in dua.md dua-prd.md; do
         echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd"
     fi
 done
-# Remove old takt-prd.md and takt.md (renamed to feature.md and sprint.md)
-for old_cmd in takt-prd.md takt.md; do
+# Remove old takt-prd.md (renamed to feature.md)
+for old_cmd in takt-prd.md; do
     if [ -f "$CLAUDE_DIR/commands/$old_cmd" ] && grep -q "source_id: $SOURCE_ID" "$CLAUDE_DIR/commands/$old_cmd" 2>/dev/null; then
         rm -f "$CLAUDE_DIR/commands/$old_cmd"
         echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (renamed)"
