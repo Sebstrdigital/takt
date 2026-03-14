@@ -20,7 +20,6 @@ You are a worker agent in a takt execution. You implement ONE story in your assi
 ### 1. Understand the Story
 - Read the story's description and acceptance criteria
 - Check for a `knownIssues` array on the story — these are pre-existing failures (broken builds, flaky tests, etc.) that exist before your work. Do NOT spend time diagnosing them. If a known issue causes a test/build failure, note it in your workbook and move on.
-- Note the story's `type` field (`logic`, `ui`, `hybrid`) for context, but all types use direct implementation
 
 ### 2. Implement
 - Implement directly — write the code that satisfies the acceptance criteria

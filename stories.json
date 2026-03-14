@@ -1,0 +1,94 @@
+{
+  "project": "takt",
+  "branchName": "takt/scrum-vocabulary-redesign",
+  "description": "Scrum Vocabulary Redesign — align takt's language to standard Scrum terms and introduce full Epic → Feature → Sprint skill hierarchy",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Rename stories.json to sprint.json across all prompt files",
+      "description": "As a takt user, I want the executable story file to be called sprint.json so that the terminology matches standard Scrum vocabulary.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "All references to stories.json in run.md, worker.md, verifier.md, debug.md, retro.md, and reviewer.md are replaced with sprint.json",
+        "CLAUDE.md, README.md, and CHANGELOG.md reference sprint.json instead of stories.json",
+        "install.sh requires no changes to handle sprint.json (workers write the file directly — no install path needed)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-12T03:10:14Z",
+      "endTime": "2026-03-12T03:19:57Z",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-002",
+      "title": "Rename /takt-prd → /feature and /takt converter → /sprint",
+      "description": "As a takt user, I want slash commands to use Scrum names so that /feature creates a Feature doc and /sprint converts it to an executable sprint.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "commands/takt-prd.md is renamed to commands/feature.md with all internal vocabulary updated (PRD → Feature, stories.json → sprint.json, /takt-prd → /feature)",
+        "commands/takt.md (PRD converter) is renamed to commands/sprint.md with all internal vocabulary updated (PRD → Feature, stories.json → sprint.json, output path tasks/prd-*.md → tasks/feature-*.md)",
+        "install.sh removes old installed files (~/.claude/commands/takt-prd.md) and installs the renamed files correctly",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "size": "medium",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-12T03:10:14Z",
+      "endTime": "2026-03-12T03:19:57Z",
+      "dependsOn": [],
+      "knownIssues": []
+    },
+    {
+      "id": "US-003",
+      "title": "Create /epic skill",
+      "description": "As a takt user, I want a /epic skill that guides me through defining a high-level Epic before breaking it into Features, so that I have a structured starting point for large pieces of work.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "commands/epic.md exists and conducts a guided interview (problem, users, goals, constraints) that produces tasks/epic-*.md with: problem statement, target users, goals, constraints, and proposed Feature breakdown with sequencing rationale",
+        "When CLAUDE.md is missing or thin, the skill presents an AskUserQuestion offering: (a) user describes the project, or (b) agent runs a quick codebase scan first — before starting the interview",
+        "At the end of the interview the skill asks if the user wants to proceed to /feature",
+        "install.sh installs commands/epic.md to ~/.claude/commands/epic.md",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "size": "large",
+      "passes": true,
+      "verify": "inline",
+      "startTime": "2026-03-12T03:19:57Z",
+      "endTime": "2026-03-12T03:22:52Z",
+      "dependsOn": [
+        "US-002"
+      ],
+      "knownIssues": []
+    },
+    {
+      "id": "US-004",
+      "title": "Create /takt wrapper entry point",
+      "description": "As a takt user, I want to type /takt to start the full planning flow from scratch, so that I have a single entry point regardless of where I am in the process.",
+      "type": "logic",
+      "acceptanceCriteria": [
+        "commands/takt.md exists as a wrapper that guides through the full flow: Epic → Feature → Sprint → start takt, with a confirmation gate at each stage transition",
+        "The skill detects existing artifacts (tasks/epic-*.md, tasks/feature-*.md, sprint.json) and offers to skip ahead to the relevant stage",
+        "install.sh installs commands/takt.md to ~/.claude/commands/takt.md (replacing the old PRD converter that is now commands/sprint.md)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "size": "medium",
+      "passes": true,
+      "verify": "deep",
+      "startTime": "2026-03-12T03:22:52Z",
+      "endTime": "2026-03-12T03:25:28Z",
+      "dependsOn": [
+        "US-002",
+        "US-003"
+      ],
+      "knownIssues": []
+    }
+  ],
+  "waves": []
+}

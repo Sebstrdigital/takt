@@ -180,7 +180,7 @@ Once the user answers all three:
 
 Branch: takt/[feature-slug]
 Stories: X total (Y small, Z medium, W large)
-  - US-001: [title] (small, inline)
+  - US-001: [title] (small)
   - ...
 
 Would you like me to start the takt?

@@ -96,7 +96,6 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
       "id": "US-001",
       "title": "[Story title]",
       "description": "As a [user], I want [feature] so that [benefit]",
-      "type": "logic",
       "acceptanceCriteria": [
         "Criterion 1",
         "Criterion 2",
@@ -106,7 +105,6 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
       "size": "small",
       "complexity": "complex",
       "passes": false,
-      "verify": "inline",
       "startTime": "",
       "endTime": "",
       "dependsOn": [],
@@ -116,33 +114,6 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
   "waves": []
 }
 ```
-
----
-
-## Verification Mode: Inline vs Deep
-
-Each story has a `verify` field controlling how verification happens. This is a **token-efficiency** feature.
-
-**Default to `"inline"`** - The same agent that implements the story verifies it before marking complete. No extra token cost.
-
-**Assign `"deep"` when:**
-
-| Condition | Why Deep Verification |
-|-----------|----------------------|
-| Story is the LAST in the Feature doc | Final verification before completion |
-| Story touches security/auth | Critical code needs independent verification |
-| Story is large/complex (5+ files) | Complex stories need thorough verification |
-| Story has failed before | Previous attempts didn't work - verify harder |
-
-**How it works:**
-- `"verify": "inline"` - Agent verifies own work using Goal-Backward Verification in prompt.md (~0 extra tokens)
-- `"verify": "deep"` - After all stories complete, takt spawns a separate verifier agent to independently confirm goals achieved (~50k-100k tokens)
-
-**Token budget consideration:** In a typical 10-story Feature doc:
-- 8-9 stories: `"verify": "inline"` (0 extra tokens)
-- 1-2 stories: `"verify": "deep"` (~100k-200k extra tokens total)
-
-This keeps verification thorough where it matters without burning tokens on simple stories.
 
 ---
 
@@ -191,22 +162,6 @@ Add a top-level `waves` array computed from `dependsOn`:
 - **Skip waves** when: ≤5 stories, linear dependencies, simple feature
 
 `start takt` auto-detects sequential vs parallel from the presence of waves.
-
----
-
-## Story Type: Categorization
-
-Each story has a `type` field for categorization. All types use **direct implementation** — workers implement the code that satisfies acceptance criteria without a TDD workflow. BDD scenarios (in `.takt/scenarios.json`) are the quality gate, verified by a separate verifier agent.
-
-**Values:** `"logic"`, `"ui"`, `"hybrid"`
-
-| Type | Description | Examples |
-|------|-------------|---------|
-| `logic` | Backend, data, business rules | Database migrations, API endpoints, parsers, state management |
-| `ui` | Pure visual/layout work | Component layouts, styling, modal structure, navigation UI |
-| `hybrid` | Both logic and UI | Form with validation, table with sorting, interactive components |
-
-**Default to `"logic"`** when uncertain. The type field helps the converter and verifier understand the nature of the story but does not change the worker's implementation approach — all types use direct implementation.
 
 ---
 
@@ -352,15 +307,13 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 4. **All stories**: `passes: false`
 5. **branchName**: Derive from Feature doc filename, kebab-case, prefixed with `takt/` (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, derive from the sprint/epic name or prompt the user for a branch name (e.g. `takt/sprint-1` or `takt/<feature-group-name>`).
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
-7. **Type assignment**: Assign `"logic"`, `"ui"`, or `"hybrid"` based on story content (see Story Type section)
-8. **Verify assignment**: Set `"verify": "deep"` for the final story, complex stories, and security-sensitive stories; otherwise `"verify": "inline"`
-10. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
-11. **Complexity assignment**: Assign `"simple"` or `"complex"` based on auto-classification rules (see Story Complexity section). Default to `"complex"` when uncertain.
-12. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
-13. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
-14. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
-15. **Scenario generation**: After writing sprint.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
-16. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
+7. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
+8. **Complexity assignment**: Assign `"simple"` or `"complex"` based on auto-classification rules (see Story Complexity section). Default to `"complex"` when uncertain.
+9. **Time tracking**: Set `startTime` and `endTime` to empty strings (`""`)
+10. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
+11. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
+12. **Scenario generation**: After writing sprint.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
+13. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
 
 ---
 
@@ -409,7 +362,6 @@ Add ability to mark tasks with different statuses.
       "id": "US-001",
       "title": "Add status field to tasks table",
       "description": "As a developer, I need to store task status in the database.",
-      "type": "logic",
       "acceptanceCriteria": [
         "Add status column: 'pending' | 'in_progress' | 'done' (default 'pending')",
         "Generate and run migration successfully",
@@ -419,7 +371,6 @@ Add ability to mark tasks with different statuses.
       "size": "small",
       "complexity": "complex",
       "passes": false,
-      "verify": "inline",
       "startTime": "",
       "endTime": "",
       "dependsOn": []
@@ -428,7 +379,6 @@ Add ability to mark tasks with different statuses.
       "id": "US-002",
       "title": "Display status badge on task cards",
       "description": "As a user, I want to see task status at a glance.",
-      "type": "ui",
       "acceptanceCriteria": [
         "Each task card shows colored status badge",
         "Badge colors: gray=pending, blue=in_progress, green=done",
@@ -438,7 +388,6 @@ Add ability to mark tasks with different statuses.
       "size": "small",
       "complexity": "simple",
       "passes": false,
-      "verify": "inline",
       "startTime": "",
       "endTime": "",
       "dependsOn": ["US-001"]
@@ -447,7 +396,6 @@ Add ability to mark tasks with different statuses.
       "id": "US-003",
       "title": "Add status toggle to task list rows",
       "description": "As a user, I want to change task status directly from the list.",
-      "type": "hybrid",
       "acceptanceCriteria": [
         "Each row has status dropdown or toggle",
         "Changing status saves immediately",
@@ -458,7 +406,6 @@ Add ability to mark tasks with different statuses.
       "size": "medium",
       "complexity": "complex",
       "passes": false,
-      "verify": "inline",
       "startTime": "",
       "endTime": "",
       "dependsOn": ["US-001"]
@@ -467,7 +414,6 @@ Add ability to mark tasks with different statuses.
       "id": "US-004",
       "title": "Filter tasks by status",
       "description": "As a user, I want to filter the list to see only certain statuses.",
-      "type": "ui",
       "acceptanceCriteria": [
         "Filter dropdown: All | Pending | In Progress | Done",
         "Filter persists in URL params",
@@ -477,7 +423,6 @@ Add ability to mark tasks with different statuses.
       "size": "medium",
       "complexity": "complex",
       "passes": false,
-      "verify": "deep",
       "startTime": "",
       "endTime": "",
       "dependsOn": ["US-002", "US-003"]
@@ -492,8 +437,6 @@ Add ability to mark tasks with different statuses.
 ```
 
 Note:
-- **Type assignments:** US-001 is `"logic"` (database), US-002/US-004 are `"ui"` (visual), US-003 is `"hybrid"` (UI + save logic). All types use direct implementation; BDD scenarios are the verification layer.
-- US-004 has `"verify": "deep"` because it's the **final story** — gets independent verification before completion
 - Size assignments: US-001, US-002 are `"small"` (single concern), US-003, US-004 are `"medium"` (multiple files/logic)
 - **Complexity assignments:** US-001 is `"complex"` (migration touches schema + migration file), US-002 is `"simple"` (adds a badge to one component, no logic), US-003/US-004 are `"complex"` (multiple files, logic decisions, integration points)
 
@@ -610,8 +553,6 @@ Before writing sprint.json, verify:
 - [ ] UI stories have "Verify in browser using Chrome integration" as criterion (optional if Chrome disabled)
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story
-- [ ] **Type assigned** to each story (`"logic"`, `"ui"`, or `"hybrid"` for categorization)
-- [ ] **Verify assigned** to each story (`"inline"` default, `"deep"` for final story and complex/security stories)
 - [ ] **Size assigned** to each story (`"small"`, `"medium"`, or `"large"`)
 - [ ] **Complexity assigned** to each story (`"simple"` or `"complex"`, default `"complex"`)
 - [ ] **Time fields** set to empty strings (`"startTime": ""`, `"endTime": ""`)
@@ -633,9 +574,9 @@ Once you have saved `sprint.json` and `.takt/scenarios.json`, present a summary 
 
 Branch: takt/feature-name
 Stories: X total (Y small, Z medium, W large)
-  - US-001: [title] (small, inline)
-  - US-002: [title] (small, inline)
-  - US-003: [title] (medium, deep) ← final verification
+  - US-001: [title] (small)
+  - US-002: [title] (small)
+  - US-003: [title] (medium)
 
 Would you like me to start the takt?
 This will:
@@ -656,7 +597,7 @@ Merged 3 Feature docs:
 
 Branch: takt/sprint-1
 Stories: 8 total (Y small, Z medium, W large)
-  - US-001: [title] (small, inline)
+  - US-001: [title] (small)
   ...
 
 Would you like me to start the takt?
