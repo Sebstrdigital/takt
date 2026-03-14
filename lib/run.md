@@ -20,7 +20,13 @@ You are the session agent running a takt execution. You read sprint.json, spawn 
    - **Sequential** — `waves` is empty, missing, or every wave contains exactly 1 story
    - **Parallel** — any wave contains 2+ stories
 4. **Estimate duration** — read `.takt/stats.json` if it exists. For each story, look up its `size` ("small"/"medium"/"large") in `stats.json.stories.bySize` and use the `avg` seconds. Add overhead from `stats.json.overhead.avg`. If no stats file exists, use defaults: small=120s, medium=180s, large=300s, overhead=480s. Format as a range: `estimate × 0.8` to `estimate × 1.3`, rounded to nearest 5 minutes.
-5. Print the start line and nothing else:
+5. **Check for retro alerts** — if `.takt/retro.md` exists, scan the Active Alerts table for rows where Status is `confirmed`. For each confirmed alert found, print one warning line **before** the start line:
+   ```
+   [takt warn] <alert text>
+   ```
+   If no confirmed alerts exist (or `.takt/retro.md` does not exist), skip this step silently. Alerts are non-blocking — proceed regardless.
+
+6. Print the start line and nothing else:
    ```
    takt started — <branchName> (<N> stories, <mode>, ~15-25 min)
    ```
@@ -242,7 +248,13 @@ Note: `sprint.json` is a temporary run artifact. The retro agent reads it for ti
 
 ## Output Discipline
 
-**Print exactly two things. Nothing else.**
+**Print exactly these things. Nothing else.**
+
+### 0. Alert warnings (Phase 1, only if confirmed alerts exist)
+```
+[takt warn] <alert text>
+```
+One line per confirmed alert, printed before the start line.
 
 ### 1. Start line (Phase 1)
 ```
