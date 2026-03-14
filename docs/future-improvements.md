@@ -195,6 +195,18 @@ Gaps 1+2 are one PRD. Gap 3 could be a second small PRD. Gap 4 is a single story
 
 ---
 
+## Action Item Auto-Classification (Green / Yellow)
+
+**Idea:** Retro action items are classified by fix type:
+- **Green:** Automatable — takt can resolve without human input (e.g., add a missing import, update a config value). Auto-carried as stories in the next sprint.
+- **Yellow:** Needs human — requires a design decision, external system access, or ambiguous scope. Surfaced as warnings before sprint start; human decides whether to fold them in.
+
+The retro agent would assign the classification. The orchestrator would auto-inject green items as stories and surface yellow items for human review.
+
+**When to implement:** After the basic "surface retro alerts in run.md Phase 1" is stable and retro entries show recurring auto-fixable patterns.
+
+---
+
 ## Orchestrator Redundancy
 
 **Risk:** Scrum master (Opus 4.6) is a single point of failure. Bad decisions cascade.
