@@ -62,6 +62,8 @@ Independent stories (no unmet deps) may be spawned in parallel even in sequentia
 
 ### Parallel Mode
 
+0. **Attempt parallel setup** — try `TeamCreate`. If it fails or parallel Task spawning is unavailable, set `parallelFallback = true` and run all stories using Sequential Mode instead. Estimate the time impact: count stories that could have run in parallel (stories sharing the same wave), multiply by the per-story average from `.takt/stats.json` (or 120s default), and record the total as `fallbackExtraMinutes` (rounded up to nearest minute).
+
 1. **Create team** via `TeamCreate`
 2. For each wave (in order):
    a. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`, using `model: "haiku"` if the story has `complexity: "simple"`, otherwise `model: "sonnet"`
@@ -227,6 +229,11 @@ Wait for completion. Capture the one-line retro summary.
    - Retro: <one-line summary>
    - Duration: N min
    ```
+   If `parallelFallback` is true, append one additional line immediately after `Duration`:
+   ```
+   - Note: Parallel Task spawning unavailable — stories ran sequentially (~N min slower than parallel estimate)
+   ```
+   where N is `fallbackExtraMinutes`. Omit this line entirely when stories ran in parallel as expected.
 
 Note: `sprint.json` is a temporary run artifact. The retro agent reads it for timing stats, then deletes it during cleanup. Do not commit it.
 
@@ -268,7 +275,9 @@ takt complete — <branchName>
 - PR: <URL or "skipped">
 - Retro: <one-line summary>
 - Duration: 18 min
+- Note: Parallel Task spawning unavailable — stories ran sequentially (~N min slower than parallel estimate)
 ```
+The `Note` line is only printed when parallel mode was requested but fell back to sequential. Omit it when stories ran in parallel as expected, or when sequential mode was always intended.
 
 ### What NOT to print
 - No story matrix
