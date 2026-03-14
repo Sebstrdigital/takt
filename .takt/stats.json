@@ -1,11 +1,11 @@
 {
-  "runs": 2,
+  "runs": 3,
   "stories": {
     "bySize": {
-      "small": { "count": 1, "fastest": 29, "slowest": 29, "avg": 29 },
+      "small": { "count": 4, "fastest": 29, "slowest": 115, "avg": 80 },
       "medium": { "count": 2, "fastest": 91, "slowest": 179, "avg": 135 }
     }
   },
-  "overhead": { "avg": 0, "count": 0 },
-  "updatedAt": "2026-03-12T00:30:00Z"
+  "overhead": { "avg": 410, "count": 1 },
+  "updatedAt": "2026-03-14T06:15:00Z"
 }
