@@ -84,6 +84,28 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 - `dependsOn`: array of story IDs this story depends on (for team mode wave computation)
 - `complexity`: `"simple"` or `"complex"` — controls worker model selection. Simple stories use Haiku; complex stories use Sonnet. All other agents (verifier, reviewer, retro, debug, bug-fix workers) use Sonnet.
 
+## Development Workflow
+
+### install.sh Sync Rule
+
+`install.sh` copies source files from this repo to `~/.claude/`. If you modify any file under `lib/`, `commands/`, or `agents/`, the installed prompts will drift from source until you re-run it.
+
+**HARD RULE:** When you (or Claude Code) modify any file in `lib/`, `commands/`, or `agents/`, Claude Code MUST ask the user before committing or pushing:
+
+> "You've modified prompt source files. Should I run `./install.sh` to sync the installed prompts before committing?"
+
+Do not skip this prompt. Stale installed prompts are silent bugs.
+
+### Shipping Checklist
+
+Before tagging a release or merging a significant change to `main`:
+
+- [ ] Run `./install.sh` — verify it completes without errors
+- [ ] Test in a real project: say "start takt" with a valid `sprint.json`
+- [ ] Verify all phases complete: workers finish, verifier runs, reviewer runs, PR is created
+- [ ] Check `.takt/retro.md` for any active alerts that block release
+- [ ] Update `CHANGELOG.md` with the change summary
+
 ## Markdown File Hygiene
 
 Keep the repo lean. Every markdown file must justify its presence. When creating or encountering `.md` files, apply this rule:
