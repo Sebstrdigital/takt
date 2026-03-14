@@ -172,47 +172,12 @@ generate_takt_section() {
     cat << 'SECTION'
 
 <!-- takt:start -->
-## takt - Autonomous Agent Orchestrator
+## takt — Autonomous Agent Orchestrator
 
-**Proactive usage — IMPORTANT:**
-When the user discusses a new feature, significant change, or enters plan mode for non-trivial work (likely 3+ stories), **suggest the takt workflow** instead of implementing inline:
+For non-trivial work (3+ stories), suggest takt: `/feature` → `/sprint` → `start takt`.
+Before entering plan mode, ask: takt Feature or native plan?
 
-1. "This sounds like it could be X stories — want me to create a Feature doc with `/feature`?"
-2. After Feature doc approval: convert to `sprint.json` + `.takt/scenarios.json` with `/sprint`
-3. Execute with `start takt` (auto-detects sequential vs parallel from sprint.json waves)
-
-**Plan-mode interception — IMPORTANT:**
-When the user wants to plan a feature (says "plan this", "I want to build X", or you're about to enter plan mode), use **AskUserQuestion** BEFORE entering native plan mode:
-- **takt Feature** — Structured Feature doc with gated what/why/why-not flow, stories, acceptance criteria, autonomous execution (`/feature`)
-- **Native plan** — Vanilla Claude Code plan mode for simpler or non-story work
-
-If the user picks takt Feature → run `/feature` (which has its own gated flow).
-If the user picks native plan → proceed with standard `EnterPlanMode`.
-
-**When NOT to suggest takt:** Simple tasks (single file change, quick fix, one-liner), pure research/exploration, or when the user explicitly wants to implement directly.
-
-**When the user says "use takt" (or similar) without prior context:**
-If the user mentions takt outside of a planning session (no active PRD, no feature discussion in progress), present the available modes:
-
-> Which takt mode do you want to run?
-> - `start takt` — Execute stories (auto-detects sequential/parallel, needs `sprint.json`)
-> - `takt debug` — Bug-fixing discipline (needs bug description or `bugs.json`)
-> - `takt retro` — Retrospective from workbooks (needs `workbook-*.md` files)
-> - `/feature` — Start fresh: create a Feature doc for a new feature
-
-**Commands:**
-- `start takt` — run stories (auto-detects sequential/parallel from waves)
-- `takt debug` — strict bug-fixing discipline
-- `takt retro` — post-execution retrospective
-- `/feature` — generate Feature doc from feature description
-- `/sprint` — convert Feature doc to sprint.json + .takt/scenarios.json
-
-**CRITICAL — Agent Type Rule:**
-When launching any takt mode (`start takt`, `takt debug`, etc.), you MUST:
-1. Read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.)
-2. Follow its instructions exactly
-3. Use `subagent_type: "general-purpose"` and `model: "sonnet"` for ALL spawned Tasks
-4. NEVER use custom/named agent types (e.g. "Seb the boss", TDD agents, or any other named agent from the Task tool's agent list). The prompt files define the correct configuration — trust them.
+**Agent Type Rule:** Read the prompt file first (`~/.claude/lib/takt/run.md`, etc.), use `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. Never use custom/named agent types.
 <!-- takt:end -->
 SECTION
 }
