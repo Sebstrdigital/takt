@@ -6,7 +6,7 @@
 | mitigated | Prompt bloat — solo.md/team-lead.md embed ~9KB of instructions that agents can read from disk | 2026-03-07 | 2026-03-07 |
 | mitigated | Workers cannot git commit — bypassPermissions mode only grants file edit access, not Bash | 2026-03-07 | 2026-03-07 |
 | mitigated | install.sh not re-run after prompt updates — manual sync is error-prone | 2026-03-07 | 2026-03-14 |
-| confirmed | No end-to-end verification of `start takt` on a real project after orchestrator unification | 2026-03-07 | 2026-03-14 |
+| resolved | No end-to-end verification of `start takt` on a real project after orchestrator unification — validated through real use across multiple projects (kraken, uven, nettobrand, simplybrf, etc.) week of 2026-03-17 | 2026-03-07 | 2026-03-22 |
 
 ---
 

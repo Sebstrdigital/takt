@@ -577,12 +577,6 @@ Stories: X total (Y small, Z medium, W large)
   - US-001: [title] (small)
   - US-002: [title] (small)
   - US-003: [title] (medium)
-
-Would you like me to start the takt?
-This will:
-1. Create the feature branch (takt/feature-name)
-2. Run all stories autonomously
-3. Ask about merge/PR when complete
 ```
 
 **Multi-doc mode output** (includes merge summary before the story list):
@@ -599,15 +593,25 @@ Branch: takt/sprint-1
 Stories: 8 total (Y small, Z medium, W large)
   - US-001: [title] (small)
   ...
-
-Would you like me to start the takt?
-This will:
-1. Create the feature branch (takt/sprint-1)
-2. Run all stories autonomously
-3. Ask about merge/PR when complete
 ```
 
-If the user says yes:
-1. Say `start takt` (it handles branch creation automatically)
+### Start Prompt (IMPORTANT — use AskUserQuestion)
+
+After printing the summary, use the `AskUserQuestion` tool to offer starting takt. Do NOT use plain text for this prompt — the TUI selection eliminates ambiguity.
+
+```
+AskUserQuestion:
+  question: "Sprint is ready (<N> stories, ~<ETA>). Start takt?"
+  header: "takt"
+  options:
+    - label: "Yes, start now"
+      description: "Create feature branch and run all stories autonomously"
+    - label: "No, I'll review first"
+      description: "Stop here — you can say 'start takt' later after reviewing sprint.json"
+```
+
+**When the user selects "Yes, start now":** The session agent MUST immediately read `~/.claude/lib/takt/run.md` and begin Phase 1 execution directly. Do NOT echo "start takt", do NOT spawn a sub-agent, do NOT ask again. Just read the prompt file and execute.
+
+**When the user selects "No, I'll review first":** Stop. The user can type "start takt" later when ready.
 
 **Note:** The user can review sprint.json before starting. This is their last checkpoint before autonomous execution begins.
