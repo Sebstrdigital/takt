@@ -174,7 +174,7 @@ Best for: bug fixing where discipline matters more than speed.
 
 ### takt retro — Continuous Improvement
 
-Reads workbooks from a completed run and generates a retrospective entry in `.takt/retro.md`. Scans previous entries for recurring patterns and manages an alert lifecycle: `potential` -> `confirmed` -> `mitigated` -> `resolved`. Stale action items (carried 3+ times) auto-escalate to confirmed alerts.
+Reads workbooks from a completed run and generates a retrospective entry in `.takt/retro.md`. Scans previous entries for recurring patterns and manages an alert lifecycle: `potential` -> `confirmed` -> `mitigated` -> `resolved`. Stale action items (carried 3+ times) auto-escalate to confirmed alerts. Chronic items (carried 5+ times) are separated into a dedicated tech debt section with explicit "fix or dismiss" guidance.
 
 Say in Claude Code:
 ```

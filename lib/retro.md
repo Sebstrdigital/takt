@@ -98,6 +98,11 @@ If `.takt/retro.md` already exists:
 
 ### 3b. Stale Action Item Escalation
 After checking history, process carried-forward items by their carry count:
+- **carry count >= 5** (chronic):
+  - Move item to a **`### Chronic Tech Debt`** section at the bottom of the retro entry (separate from Action Items)
+  - Prefix with `[carried Nx]` and append: `Suggested story: <actionable description>`
+  - Escalate the related alert to `confirmed` with note: "Chronic — carried N sprints without resolution"
+  - Add guidance: "This item should be included as a story in the next sprint, or explicitly dismissed with a reason."
 - **carry count >= 3** (stale):
   - Escalate the related alert in the alerts table to `confirmed` status. If no matching alert exists, create one as `confirmed`.
   - In the new retro entry's Action Items section, prefix the item with `[carried Nx]`
@@ -131,7 +136,9 @@ When an alert status changes to `mitigated` or `resolved`, record the improvemen
 
 ### 7. Update Timing Stats
 
-Compute per-story durations from `startTime`/`endTime` in `sprint.json` and update `.takt/stats.json`.
+Compute per-story durations from `startTime`/`endTime` and update `.takt/stats.json`.
+
+**Timing source**: Read `.takt/sprint-snapshot.json` (created by the orchestrator before spawning you). Fall back to `sprint.json` if the snapshot doesn't exist. If neither file exists, log "timing stats unavailable — no sprint data found" in the Metrics section and skip to step 8.
 
 **Step 1 — Record retro start time**: Note the current UTC timestamp when you begin. This is used for overhead calculation.
 
@@ -167,7 +174,7 @@ Update overhead the same way (single running average). Increment `runs` count. S
 After the retro entry and stats update have been completed:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the Feature doc: derive filename from `sprint.json` branchName (`takt/feature-name` → `tasks/feature-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
-- Delete run artifacts: `sprint.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
+- Delete run artifacts: `sprint.json`, `.takt/sprint-snapshot.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
 - Do NOT delete `.takt/stats.json` — it persists across runs
 - Only delete after confirming the retro entry was written successfully
 

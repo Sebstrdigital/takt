@@ -6,9 +6,11 @@ You are the session agent running a takt execution. You read sprint.json, spawn 
 
 ## Phase 1: Startup
 
-0. **Verify model** — Check that you are running on `claude-sonnet-4-6`. If you are not, output:
-   > "takt requires Sonnet 4.6 — please switch with `/model sonnet` and re-run."
-   Then stop. Do not proceed.
+0. **Verify model (one-shot)** — Check once that you are running on `claude-sonnet-4-6`. If you are not, print:
+   ```
+   [takt warn] Not running on Sonnet 4.6 — results may vary. Switch with /model sonnet for best results.
+   ```
+   Continue regardless. Do NOT re-check the model later — context compaction can trigger false re-checks.
 
 1. Read `sprint.json` from the project root. Validate it has a `userStories` array.
 2. Create or switch to the feature branch:
@@ -43,10 +45,14 @@ Get incomplete stories: `jq -r '[.userStories[] | select(.passes == false)] | so
 For each incomplete story (priority order):
 
 1. **Check deps** — skip if any `dependsOn` story has `passes: false`
-2. **Record start time** — `jq` to set `.startTime`
+2. **Record start time** — set the story's `startTime` before dispatching:
+   ```bash
+   jq --arg id "<STORY-ID>" --arg t "$(date -u +%s)" \
+     '(.userStories[] | select(.id == $id)).startTime = ($t | tonumber)' sprint.json > tmp && mv tmp sprint.json
+   ```
 3. **Spawn worker** with a lean prompt (see Worker Prompt Template below)
    - `subagent_type: "general-purpose"`, `model: "haiku"` if story has `complexity: "simple"`, otherwise `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
-4. **Wait** for worker to complete
+4. **Wait** for worker to complete, then **`TaskStop`** the worker immediately. Workbooks contain all context needed for later phases; live agents are not needed.
 5. **Git commit** — the session agent commits the worker's changes:
    ```bash
    git status
@@ -55,28 +61,52 @@ For each incomplete story (priority order):
    ```
    Never `git add -A`. Exclude: `.takt/`, `sprint.json`, `bugs.json`, `review-comments.json`.
 6. **Verify** workbook exists at `.takt/workbooks/workbook-<STORY-ID>.md`
-7. **Update sprint.json** — set `passes: true` and `endTime`
+7. **Update sprint.json** — set `passes: true` and `endTime`:
+   ```bash
+   jq --arg id "<STORY-ID>" --arg t "$(date -u +%s)" \
+     '(.userStories[] | select(.id == $id)) |= (.passes = true | .endTime = ($t | tonumber))' sprint.json > tmp && mv tmp sprint.json
+   ```
 8. **On failure** — retry once with error context. If retry fails, mark blocked and continue. Skip any stories that `dependsOn` a blocked story.
 
 Independent stories (no unmet deps) may be spawned in parallel even in sequential mode.
 
 ### Parallel Mode
 
-0. **Attempt parallel setup** — try `TeamCreate`. If it fails or parallel Task spawning is unavailable, set `parallelFallback = true` and run all stories using Sequential Mode instead. Estimate the time impact: count stories that could have run in parallel (stories sharing the same wave), multiply by the per-story average from `.takt/stats.json` (or 120s default), and record the total as `fallbackExtraMinutes` (rounded up to nearest minute).
+0. **Submodule check** — run `git rev-parse --show-superproject-working-tree 2>/dev/null`. If non-empty, the project is inside a submodule — worktree isolation won't cover it. Print:
+   ```
+   [takt warn] Submodule repo detected — falling back to sequential (worktree isolation doesn't cover submodules)
+   ```
+   Set `parallelFallback = true` with reason "submodule" and run all stories using Sequential Mode instead.
 
-1. **Create team** via `TeamCreate`
-2. For each wave (in order):
-   a. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`, using `model: "haiku"` if the story has `complexity: "simple"`, otherwise `model: "sonnet"`
-   b. Wait for all workers in the wave to complete
-   c. **Determine merge order** — read each story's workbook at `.takt/workbooks/workbook-<STORY-ID>.md` and extract the "Files Changed" list. Build a running set of files already merged. Sort remaining stories by ascending overlap count with that set (fewest shared files first). Fall back to priority order if any workbook is missing or unreadable.
-   d. **Merge** each worktree in the computed order, one at a time:
+1. **Attempt parallel setup** — try `TeamCreate`. If it fails or parallel Task spawning is unavailable, set `parallelFallback = true` and run all stories using Sequential Mode instead. Estimate the time impact: count stories that could have run in parallel (stories sharing the same wave), multiply by the per-story average from `.takt/stats.json` (or 120s default), and record the total as `fallbackExtraMinutes` (rounded up to nearest minute).
+
+2. **Create team** via `TeamCreate`
+3. For each wave (in order):
+   a. **Set `startTime`** on every story in this wave before dispatching:
+      ```bash
+      for id in <STORY-IDs in wave>; do
+        jq --arg id "$id" --arg t "$(date -u +%s)" \
+          '(.userStories[] | select(.id == $id)).startTime = ($t | tonumber)' sprint.json > tmp && mv tmp sprint.json
+      done
+      ```
+   b. Spawn all stories in the wave as worker Tasks with `isolation: "worktree"`, using `model: "haiku"` if the story has `complexity: "simple"`, otherwise `model: "sonnet"`
+   c. Wait for all workers in the wave to complete
+   d. **Stop workers** — call `TaskStop` on every worker in this wave immediately after they complete. Workbooks contain all context needed for later phases; live agents are not needed.
+   e. **Determine merge order** — read each story's workbook at `.takt/workbooks/workbook-<STORY-ID>.md` and extract the "Files Changed" list. Build a running set of files already merged. Sort remaining stories by ascending overlap count with that set (fewest shared files first). Fall back to priority order if any workbook is missing or unreadable.
+   f. **Merge** each worktree in the computed order, one at a time:
       ```bash
       git merge takt/<story-id> --no-ff -m "feat: <STORY-ID> - <title>"
       ```
-      If conflict: consult the worker agent. Run tests after each merge.
-   e. Verify workbooks exist for every story in the wave
-   f. Update `sprint.json` — set `passes: true` and `endTime` for each merged story
-3. After all waves: proceed to Phase 3
+      If conflict: resolve using the workbook context (files changed, decisions). Run tests after each merge.
+   g. Verify workbooks exist for every story in the wave
+   h. **Update `sprint.json`** — set `passes: true` and `endTime` for each merged story:
+      ```bash
+      for id in <STORY-IDs in wave>; do
+        jq --arg id "$id" --arg t "$(date -u +%s)" \
+          '(.userStories[] | select(.id == $id)) |= (.passes = true | .endTime = ($t | tonumber))' sprint.json > tmp && mv tmp sprint.json
+      done
+      ```
+4. After all waves: `TeamDelete` to tear down the team, then proceed to Phase 3
 
 Failure handling: max 2 retries per story. After 2 failures, mark blocked. Dependent stories in later waves are also blocked.
 
@@ -124,7 +154,7 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
    ```
    Config: `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
 
-2. If `VERIFICATION: PASSED` — proceed to Phase 4.
+2. Wait for result, then `TaskStop` the verifier. If `VERIFICATION: PASSED` — proceed to Phase 4.
 
 3. If `VERIFICATION: FAILED` — enter verify-fix loop (max 3 cycles):
    a. Read `bugs.json` (behavioral descriptions only — safe to read)
@@ -143,9 +173,10 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
       ## Instructions
       Fix the bug. Do NOT run git commands. Do NOT modify sprint.json.
       ```
-   c. After all fixes: `git add` + `git commit -m "fix: <BUG-ID> - <description>"`
-   d. Spawn a fresh verifier (same lean prompt)
-   e. If PASSED — proceed. If FAILED and cycles remain — repeat. If 3 cycles exhausted — report failure and STOP.
+   c. `TaskStop` each fix worker after it completes.
+   d. After all fixes: `git add` + `git commit -m "fix: <BUG-ID> - <description>"`
+   e. Spawn a fresh verifier (same lean prompt)
+   f. Wait for result, then `TaskStop` the verifier. If PASSED — proceed. If FAILED and cycles remain — repeat. If 3 cycles exhausted — report failure and STOP.
 
 ---
 
@@ -173,14 +204,14 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
    ```
    Config: `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
 
-3. Read `review-comments.json`. Count must-fix items.
+3. Wait for result, then `TaskStop` the reviewer. Read `review-comments.json`. Count must-fix items.
    - Zero must-fix — proceed to Phase 5.
    - One or more — enter review-fix loop (max 2 cycles):
-     a. Spawn a fix worker per must-fix comment (same lean pattern as bug fixes)
+     a. Spawn a fix worker per must-fix comment (same lean pattern as bug fixes). `TaskStop` each after completion.
      b. After fixes: `git add` + `git commit -m "fix: review - <description>"`
      c. Re-generate: `git diff main...HEAD > .takt/review.diff`
      d. Spawn a fresh reviewer
-     e. If clean — proceed. If must-fix remain after 2 cycles — note them and proceed anyway (do not block).
+     e. Wait for result, then `TaskStop` the reviewer. If clean — proceed. If must-fix remain after 2 cycles — note them and proceed anyway (do not block).
 
 ---
 
@@ -197,7 +228,12 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
 
 ## Phase 6: Auto-Retro
 
-Spawn a retro agent with a lean prompt:
+1. **Snapshot sprint.json** for the retro agent (it lives only in the working tree and is fragile):
+   ```bash
+   cp sprint.json .takt/sprint-snapshot.json
+   ```
+
+2. Spawn a retro agent with a lean prompt:
 ```
 # Auto-Retro
 
@@ -214,7 +250,7 @@ Output a one-line summary.
 ```
 Config: `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
 
-Wait for completion. Capture the one-line retro summary.
+Wait for completion. `TaskStop` the retro agent. Capture the one-line retro summary.
 
 ---
 
@@ -249,7 +285,9 @@ Note: `sprint.json` is a temporary run artifact. The retro agent reads it for ti
 6. **Respect priority and deps** — lowest priority number first, skip unmet deps
 7. **Max retries** — 1 for stories, 3 cycles for verification, 2 cycles for review
 8. **Absolute paths only** — never `cd`, never relative paths
-9. **Silent execution** — see Output Discipline below
+9. **Kill agents immediately** — `TaskStop` every spawned agent as soon as you have its result. Workbooks are the source of truth, not agent memory. Never leave idle agents running.
+10. **Never kill tmux panes** — takt does not manage tmux. Agent cleanup is handled exclusively via `TaskStop` and `TeamDelete`. Never use `tmux kill-pane` or similar commands.
+11. **Silent execution** — see Output Discipline below
 
 ---
 

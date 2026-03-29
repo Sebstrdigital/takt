@@ -2,6 +2,14 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-03-29: Add agent cleanup — TaskStop every spawned agent immediately after completion, TeamDelete after all waves; eliminates 15-20 zombie agent tabs per parallel run
+- 2026-03-29: Add explicit per-story timing — jq commands for startTime (before dispatch) and endTime (after commit) in both sequential and parallel modes; fixes empty timing data across 7+ consecutive runs
+- 2026-03-29: Add sprint.json snapshot — orchestrator copies sprint.json to .takt/sprint-snapshot.json before retro; retro reads snapshot with graceful fallback; fixes "timing stats unavailable" in 4 repos this week
+- 2026-03-29: Add chronic tech debt tier — action items carried 5+ times move to dedicated section with "include in next sprint or dismiss" guidance; separates rotting items from fresh action items
+- 2026-03-29: Add submodule detection — parallel mode checks git rev-parse --show-superproject-working-tree; auto-falls back to sequential with warning when worktree isolation can't cover submodules
+- 2026-03-29: Change model guard to one-shot warning — no longer blocks execution; prevents compaction-triggered re-check loop
+- 2026-03-29: Add tmux safety rule — takt never kills tmux panes; cleanup exclusively via TaskStop/TeamDelete
+
 - 2026-03-14: Mitigate install.sh sync gap — CLAUDE.md now has explicit sync rule and shipping checklist; session agent prompted to run ./install.sh when commands/ or lib/ files are modified
 - 2026-03-14: Add orchestrator resilience — surface confirmed retro alerts before sprint start, sequential fallback note in completion report when waves present but parallelism unavailable
 - 2026-03-12: Remove /tdd command — BDD scenarios are the quality gate; TDD workflow redundant
