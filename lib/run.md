@@ -253,6 +253,64 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
 
 ---
 
+## Phase 4c: Local Validation (runs after Phase 4b — project-specific)
+
+**This phase exists because static review (Phases 4 and 4b) cannot catch runtime failures. Two bugs escaped to a stakeholder because nobody actually executed the code before shipping.**
+
+### Detection
+
+Check if `.takt/local-validation.md` exists in the project root. If it does, read it and execute the validation steps. If it does not exist, skip to Phase 5.
+
+### Execution
+
+1. Read `.takt/local-validation.md` for project-specific validation steps.
+2. Spawn a validation agent with a lean prompt:
+   ```
+   # Local Validation
+
+   ## Project Working Directory
+   <absolute path>
+
+   ## Instructions
+   Read .takt/local-validation.md for the validation steps.
+   Execute each step. Report pass/fail for each.
+   If any step fails, investigate the root cause and attempt to fix it.
+   Do NOT modify sprint.json. Do NOT run git commands.
+   Write your results to .takt/validation-report.md
+   ```
+   Config: `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
+
+3. Wait for result, then `TaskStop` the validation agent. Read `.takt/validation-report.md`.
+   - All automated steps pass — commit any fixes, then prompt the user for manual validation (see below).
+   - Failures that the agent could not fix — STOP. Report failures to the user. Do not create a PR.
+
+4. **Manual validation prompt** — after automated steps pass, use `AskUserQuestion` to ask the user to perform the manual checks defined in `local-validation.md`:
+   ```
+   AskUserQuestion:
+     question: "Automated local validation passed. Please do the manual browser check and confirm."
+     header: "validate"
+     options:
+       - label: "All good — ship it"
+         description: "Manual check passed, proceed to PR creation"
+       - label: "Found issues"
+         description: "Stop — I'll describe what's wrong"
+   ```
+   - "All good" — proceed to Phase 5.
+   - "Found issues" — STOP. Wait for the user to describe the issues. Fix and re-validate.
+
+### What goes in `.takt/local-validation.md`
+
+Project-specific. Examples:
+- Docker container rebuild and startup verification
+- HTTP requests to new API endpoints
+- Playwright test suite execution
+- Database migration application
+- Any runtime check that static review cannot cover
+
+The file is per-project, not part of takt core. takt only provides the framework (detect → run → report → prompt user).
+
+---
+
 ## Phase 5: PR Creation
 
 1. Check `command -v gh`. If missing, skip to Phase 6.
