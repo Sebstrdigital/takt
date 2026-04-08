@@ -174,7 +174,7 @@ Update overhead the same way (single running average). Increment `runs` count. S
 After the retro entry and stats update have been completed:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
 - Archive the Feature doc: derive filename from `sprint.json` branchName (`takt/feature-name` → `tasks/feature-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
-- Delete run artifacts: `sprint.json`, `.takt/sprint-snapshot.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`
+- Delete run artifacts: `sprint.json`, `.takt/sprint-snapshot.json`, `.takt/scenarios.json`, `.takt/review.diff`, `bugs.json`, `review-comments.json`, `final-gate-comments.json`
 - Do NOT delete `.takt/stats.json` — it persists across runs
 - Only delete after confirming the retro entry was written successfully
 

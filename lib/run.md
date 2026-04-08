@@ -215,6 +215,44 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
 
 ---
 
+## Phase 4b: Final Gate (MANDATORY — runs after Phase 4)
+
+**This gate exists because a stakeholder found a production connection leak that two review cycles missed. It is non-negotiable.**
+
+1. Re-generate the diff (it may have changed from review fixes):
+   ```bash
+   git diff main...HEAD > .takt/review.diff
+   ```
+
+2. Spawn a final-gate agent with a lean prompt:
+   ```
+   # Final Gate Review
+
+   ## Project Working Directory
+   <absolute path>
+
+   ## Instructions
+   Read ~/.claude/lib/takt/final-gate.md for your instructions.
+   Read .takt/review.diff for the feature branch diff.
+   Read CLAUDE.md for project conventions.
+   Write final-gate-comments.json to the project root.
+   ```
+   Config: `subagent_type: "general-purpose"`, `model: "opus"`, `mode: "bypassPermissions"`, `run_in_background: true`
+
+   **Model: Opus is mandatory for this phase.** The general reviewer uses Sonnet — the final gate uses the strongest available model. This is the last chance to catch bugs before a human sees the code.
+
+3. Wait for result, then `TaskStop` the gate agent. Read `final-gate-comments.json`.
+   - Verdict `PASSED` — proceed to Phase 5.
+   - Verdict `BLOCKED` — enter gate-fix loop (max 2 cycles):
+     a. Spawn a fix worker per must-fix finding. `TaskStop` each after completion.
+     b. After fixes: `git add` + `git commit -m "fix: final-gate - <description>"`
+     c. Re-generate diff and re-run the final gate agent.
+     d. If `PASSED` after fixes — proceed. If `BLOCKED` after 2 cycles — STOP. Do not create a PR. Report the unresolved findings to the user.
+
+**Unlike Phase 4, the final gate NEVER proceeds with unresolved must-fix items. It blocks the PR.**
+
+---
+
 ## Phase 5: PR Creation
 
 1. Check `command -v gh`. If missing, skip to Phase 6.
