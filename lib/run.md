@@ -4,6 +4,137 @@ You are the session agent running a takt execution. You read sprint.json, spawn 
 
 ---
 
+## Phase 0: Pre-setup (runs before Phase 1)
+
+This phase configures the project for takt on first run and probes optional tooling on every run. All state lives in two places:
+
+- **`.takt/config.json`** — persistent, authoritative source for project toggles (committed to repo)
+- **`.takt/session.json`** — per-run cache, rewritten every Phase 0, read by later phases
+
+### 0.1 Ensure `.takt/config.json` exists
+
+1. `mkdir -p .takt`
+2. Check if `.takt/config.json` exists and contains `final_gate`, `local_validation`, and `worker_runner` keys.
+3. **If the file is missing or keys are absent**, prompt the user once via `AskUserQuestion` for each missing setting, then write `.takt/config.json` with the answers:
+
+   ```
+   AskUserQuestion:
+     questions:
+       - question: "Phase 4b — Final Gate (Opus reviewer). Previously caught a stakeholder-facing production leak that two review cycles missed. Strongly recommended. Run for this project?"
+         header: "final_gate"
+         multiSelect: false
+         options:
+           - label: "Yes"
+             description: "Run the final-gate agent on every takt run"
+           - label: "No"
+             description: "Skip the final-gate phase for this project"
+       - question: "Phase 4c — Local Validation (runtime checks via .takt/local-validation.md). Run for this project?"
+         header: "local_validation"
+         multiSelect: false
+         options:
+           - label: "Yes"
+             description: "Run the local-validation agent when .takt/local-validation.md exists"
+           - label: "No"
+             description: "Skip the local-validation phase for this project"
+       - question: "Worker runner — who executes story implementations?"
+         header: "worker_runner"
+         multiSelect: false
+         options:
+           - label: "Anthropic"
+             description: "Use Claude Agent tool (Sonnet/Haiku) — best quality, uses Anthropic token budget"
+           - label: "External"
+             description: "Use an external CLI (e.g. OpenCode) — saves Anthropic tokens"
+   ```
+
+4. **If `worker_runner` is `"external"`**, prompt for the external command:
+   ```
+   AskUserQuestion:
+     question: "External worker command. Use {STORY_ID} as placeholder for the story ID."
+     header: "worker_runner_external_cmd"
+     default: "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
+   ```
+   If the user confirms the default or provides a custom command, store it in `worker_runner_external_cmd`.
+
+5. Write `.takt/config.json` (using the user's answers, lowercased booleans):
+   ```json
+   {
+     "final_gate": true,
+     "local_validation": true,
+     "worker_runner": "anthropic"
+   }
+   ```
+   Or when external:
+   ```json
+   {
+     "final_gate": true,
+     "local_validation": true,
+     "worker_runner": "external",
+     "worker_runner_external_cmd": "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
+   }
+   ```
+
+5. **If `final_gate` is `false`** (either freshly chosen or already in the file), print a loud warning once at Phase 0 and continue:
+   ```
+   [takt warn] FINAL GATE DISABLED for this project — static review alone has previously missed a stakeholder-facing production leak. Re-enable in .takt/config.json.
+   ```
+
+### 0.2 Probe optional tooling (jCodeMunch + context-mode)
+
+Probe once per run. Both probes are silent — no user-visible output. Results written to `.takt/session.json`.
+
+1. **jCodeMunch probe** — attempt `mcp__jcodemunch__list_repos`. On success, set `jcodemunch.available = true`. On any error (tool unavailable, server unreachable), set `jcodemunch.available = false`.
+2. **context-mode probe** — attempt `mcp__plugin_context-mode_context-mode__ctx_stats`. On success, set `context_mode.available = true`. Otherwise `false`.
+
+### 0.3 Index the repo via jCodeMunch (if available)
+
+Runs only when `jcodemunch.available = true`. Silent — no output.
+
+1. Check `CLAUDE.md` for an existing `## jCodeMunch` block with an `indexed_commit: <sha>` field.
+2. **If no `## jCodeMunch` block exists:**
+   a. Call `mcp__jcodemunch__index_repo` against the current working directory.
+   b. Capture `git rev-parse HEAD` and current ISO 8601 timestamp.
+   c. Append a new block to `CLAUDE.md`:
+      ```
+      ## jCodeMunch
+      indexed_commit: <sha>
+      indexed_at: <ISO 8601 timestamp>
+      ```
+3. **If the block exists:**
+   a. Run `git rev-list <indexed_commit>..HEAD --count`.
+   b. If the count is greater than 20, re-index via `mcp__jcodemunch__index_repo` and update the block with the new `indexed_commit` + `indexed_at`.
+   c. Otherwise leave the block untouched.
+4. On any jCodeMunch error during indexing, silently set `jcodemunch.indexed = false` and continue — indexing is best-effort.
+
+### 0.4 Write `.takt/session.json`
+
+Read `.takt/config.json` and merge with the tool probe results to write the final session state:
+
+```json
+{
+  "final_gate": true,
+  "local_validation": true,
+  "worker_runner": "anthropic",
+  "jcodemunch": { "available": true, "indexed": true, "indexed_commit": "<sha>" },
+  "context_mode": { "available": true }
+}
+```
+
+Or when external:
+```json
+{
+  "final_gate": true,
+  "local_validation": true,
+  "worker_runner": "external",
+  "worker_runner_external_cmd": "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\"",
+  "jcodemunch": { "available": true, "indexed": true, "indexed_commit": "<sha>" },
+  "context_mode": { "available": true }
+}
+```
+
+Later phases (4b, 4c) read this file to decide whether to run. Phase 2 reads `worker_runner` to decide how to dispatch workers. Worker / verifier / reviewer / final-gate agents read this file to decide whether to prefer jCodeMunch + context-mode tools over built-ins. Note: `worker_runner` only affects story workers — verifier, reviewer, and final-gate always use Anthropic Agent tool.
+
+---
+
 ## Phase 1: Startup
 
 0. **Verify model (one-shot)** — Check once that you are running on `claude-sonnet-4-6`. If you are not, print:
@@ -50,9 +181,21 @@ For each incomplete story (priority order):
    jq --arg id "<STORY-ID>" --arg t "$(date -u +%s)" \
      '(.userStories[] | select(.id == $id)).startTime = ($t | tonumber)' sprint.json > tmp && mv tmp sprint.json
    ```
-3. **Spawn worker** with a lean prompt (see Worker Prompt Template below)
+3. **Spawn worker** — dispatch depends on `worker_runner` in `.takt/session.json`:
+
+   **If `worker_runner: "anthropic"` (default):**
+   Spawn via Agent tool with a lean prompt (see Worker Prompt Template below).
    - `subagent_type: "general-purpose"`, `model: "haiku"` if story has `complexity: "simple"`, otherwise `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
-4. **Wait** for worker to complete, then **`TaskStop`** the worker immediately. Workbooks contain all context needed for later phases; live agents are not needed.
+
+   **If `worker_runner: "external"`:**
+   Run via Bash using `worker_runner_external_cmd` from `.takt/session.json`. Replace `{STORY_ID}` with the actual story ID:
+   ```bash
+   # Example with OpenCode:
+   opencode run --yolo "Implement user story US-001 found in sprint.json. Do this running /worker skill."
+   ```
+   The external CLI runs in the project working directory. Wait for it to exit.
+
+4. **Wait** for worker to complete. If anthropic: **`TaskStop`** the worker immediately. If external: the Bash command blocks until done. Workbooks contain all context needed for later phases; live agents are not needed.
 5. **Git commit** — the session agent commits the worker's changes:
    ```bash
    git status
@@ -215,9 +358,11 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
 
 ---
 
-## Phase 4b: Final Gate (MANDATORY — runs after Phase 4)
+## Phase 4b: Final Gate (project-toggleable — runs after Phase 4)
 
-**This gate exists because a stakeholder found a production connection leak that two review cycles missed. It is non-negotiable.**
+**This gate exists because a stakeholder found a production connection leak that two review cycles missed. It is strongly recommended for every project and enabled by default.**
+
+**Gate check (first step):** Read `.takt/session.json`. If `final_gate` is `false`, skip this entire phase and proceed directly to Phase 4c. Do not print anything here — the Phase 0 warning already informed the user that the gate is disabled for this project. If `final_gate` is `true` or the field is missing, run the phase as described below.
 
 1. Re-generate the diff (it may have changed from review fixes):
    ```bash
@@ -249,17 +394,27 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
      c. Re-generate diff and re-run the final gate agent.
      d. If `PASSED` after fixes — proceed. If `BLOCKED` after 2 cycles — STOP. Do not create a PR. Report the unresolved findings to the user.
 
-**Unlike Phase 4, the final gate NEVER proceeds with unresolved must-fix items. It blocks the PR.**
+**When the final gate runs, it NEVER proceeds with unresolved must-fix items — it blocks the PR.** The gate is only skipped when `final_gate: false` is set in the project's `.takt/config.json`.
 
 ---
 
-## Phase 4c: Local Validation (runs after Phase 4b — project-specific)
+## Phase 4c: Local Validation (runs after Phase 4b — project-toggleable)
 
 **This phase exists because static review (Phases 4 and 4b) cannot catch runtime failures. Two bugs escaped to a stakeholder because nobody actually executed the code before shipping.**
 
+### Gate check
+
+Read `.takt/session.json`. If `local_validation` is `false`, skip this entire phase and proceed to Phase 5. No output.
+
+If `local_validation` is `true` (or missing), proceed to detection.
+
 ### Detection
 
-Check if `.takt/local-validation.md` exists in the project root. If it does, read it and execute the validation steps. If it does not exist, skip to Phase 5.
+Check if `.takt/local-validation.md` exists in the project root. If it does, read it and execute the validation steps. If `local_validation: true` but the file is missing, print once and continue to Phase 5:
+
+```
+[takt warn] local_validation enabled in .takt/config.json but .takt/local-validation.md is missing — skipping runtime checks.
+```
 
 ### Execution
 
