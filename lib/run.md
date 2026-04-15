@@ -51,7 +51,7 @@ This phase configures the project for takt on first run and probes optional tool
    AskUserQuestion:
      question: "External worker command. Use {STORY_ID} as placeholder for the story ID."
      header: "worker_runner_external_cmd"
-     default: "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
+     default: "opencode run --dangerously-skip-permissions \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
    ```
    If the user confirms the default or provides a custom command, store it in `worker_runner_external_cmd`.
 
@@ -69,7 +69,7 @@ This phase configures the project for takt on first run and probes optional tool
      "final_gate": true,
      "local_validation": true,
      "worker_runner": "external",
-     "worker_runner_external_cmd": "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
+     "worker_runner_external_cmd": "opencode run --dangerously-skip-permissions \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
    }
    ```
 
@@ -105,6 +105,17 @@ Runs only when `jcodemunch.available = true`. Silent — no output.
    c. Otherwise leave the block untouched.
 4. On any jCodeMunch error during indexing, silently set `jcodemunch.indexed = false` and continue — indexing is best-effort.
 
+### 0.3b Load local overrides (if present)
+
+If `~/.claude/lib/takt/run-local.md` exists, read it and apply its instructions. This file is not managed by the takt installer — it holds user-specific extensions (extra tool probes, project memory integrations, etc.) that should survive `install.sh` runs.
+
+The local override file may:
+- Add additional tool probes (results merged into `.takt/session.json`)
+- Add phases or sub-steps (referenced by phase number, e.g., "Phase 0.5", "Phase 6 addition")
+- Override probe behavior for tools already probed above
+
+If the file does not exist, skip silently.
+
 ### 0.4 Write `.takt/session.json`
 
 Read `.takt/config.json` and merge with the tool probe results to write the final session state:
@@ -125,7 +136,7 @@ Or when external:
   "final_gate": true,
   "local_validation": true,
   "worker_runner": "external",
-  "worker_runner_external_cmd": "opencode run --yolo \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\"",
+  "worker_runner_external_cmd": "opencode run --dangerously-skip-permissions \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\"",
   "jcodemunch": { "available": true, "indexed": true, "indexed_commit": "<sha>" },
   "context_mode": { "available": true }
 }
@@ -191,7 +202,7 @@ For each incomplete story (priority order):
    Run via Bash using `worker_runner_external_cmd` from `.takt/session.json`. Replace `{STORY_ID}` with the actual story ID:
    ```bash
    # Example with OpenCode:
-   opencode run --yolo "Implement user story US-001 found in sprint.json. Do this running /worker skill."
+   opencode run --dangerously-skip-permissions "Implement user story US-001 found in sprint.json. Do this running /worker skill."
    ```
    The external CLI runs in the project working directory. Wait for it to exit.
 
