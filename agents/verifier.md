@@ -10,6 +10,10 @@ You will receive:
 
 **NEVER trust that code was merely written. Verify actual outcomes.**
 
+## Optional Tooling (silent-skip if unavailable)
+
+Read `~/.claude/lib/takt/tooling.md` for optional tool configuration.
+
 ## Verification Process
 
 ### Step 1: Read Scenarios

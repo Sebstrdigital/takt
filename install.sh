@@ -91,66 +91,34 @@ echo "  takt Installer"
 echo "========================================="
 echo ""
 
-# --- Cleanup old dua-loop artifacts ---
-OLD_DUALOOP_DIR="$CLAUDE_DIR/lib/dualoop"
-if [ -d "$OLD_DUALOOP_DIR" ]; then
-    rm -rf "$OLD_DUALOOP_DIR"
-    echo -e "  ${YELLOW}removed${NC}  lib/dualoop/ (replaced by lib/takt/)"
-fi
-for old_cmd in dua.md dua-prd.md; do
-    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ]; then
-        rm -f "$CLAUDE_DIR/commands/$old_cmd"
-        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd"
+# --- Cleanup legacy artifacts (removed 2026-04-16, safe to delete this block after 2026-06-01) ---
+for old_file in "$TAKT_DIR/reviewer.md"; do
+    if [ -f "$old_file" ]; then
+        rm -f "$old_file"
+        echo -e "  ${YELLOW}removed${NC}  $(basename "$old_file") (merged into final-gate.md)"
     fi
 done
-# Remove old takt-prd.md (renamed to feature.md)
-for old_cmd in takt-prd.md; do
-    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ] && grep -q "source_id: $SOURCE_ID" "$CLAUDE_DIR/commands/$old_cmd" 2>/dev/null; then
-        rm -f "$CLAUDE_DIR/commands/$old_cmd"
-        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (renamed)"
-    fi
-done
-# Remove tdd.md (TDD workflow dropped — BDD scenarios are the quality gate)
-for old_cmd in tdd.md takt-tdd.md; do
-    if [ -f "$CLAUDE_DIR/commands/$old_cmd" ]; then
-        rm -f "$CLAUDE_DIR/commands/$old_cmd"
-        echo -e "  ${YELLOW}removed${NC}  commands/$old_cmd (TDD workflow dropped)"
-    fi
-done
-# Remove old dua-loop section from CLAUDE.md if takt section also present
-if [ -f "$CLAUDE_MD" ] && grep -q "dua-loop - Autonomous Agent Loop" "$CLAUDE_MD" 2>/dev/null; then
-    sed -i '' '/## dua-loop - Autonomous Agent Loop/,/## takt/{ /## takt/!d; }' "$CLAUDE_MD"
-    echo -e "  ${YELLOW}cleaned${NC}  CLAUDE.md (removed old dua-loop section)"
-fi
-# Remove old takt.sh (replaced by native Claude Code execution)
-if [ -f "$TAKT_DIR/takt.sh" ]; then
-    rm -f "$TAKT_DIR/takt.sh"
-    echo -e "  ${YELLOW}removed${NC}  lib/takt/takt.sh (replaced by native execution)"
-fi
 echo ""
 
 # --- takt core ---
 echo "takt -> $TAKT_DIR/"
 mkdir -p "$TAKT_DIR"
 cp "$SCRIPT_DIR/lib/run.md" "$TAKT_DIR/run.md"
-# Clean up old prompt files replaced by run.md
-for old_file in prompt.md solo.md team-lead.md; do
-    if [ -f "$TAKT_DIR/$old_file" ]; then
-        rm -f "$TAKT_DIR/$old_file"
-        echo -e "  ${YELLOW}removed${NC}  $old_file (replaced by run.md)"
-    fi
-done
 cp "$SCRIPT_DIR/agents/verifier.md" "$TAKT_DIR/verifier.md"
 cp "$SCRIPT_DIR/lib/worker.md" "$TAKT_DIR/worker.md"
 cp "$SCRIPT_DIR/lib/debug.md" "$TAKT_DIR/debug.md"
 cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
-cp "$SCRIPT_DIR/lib/reviewer.md" "$TAKT_DIR/reviewer.md"
+cp "$SCRIPT_DIR/lib/final-gate.md" "$TAKT_DIR/final-gate.md"
+cp "$SCRIPT_DIR/lib/tooling.md" "$TAKT_DIR/tooling.md"
+cp "$SCRIPT_DIR/lib/init.md" "$TAKT_DIR/init.md"
 echo -e "  ${GREEN}copied${NC}   run.md"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
 echo -e "  ${GREEN}copied${NC}   worker.md"
 echo -e "  ${GREEN}copied${NC}   debug.md"
 echo -e "  ${GREEN}copied${NC}   retro.md"
-echo -e "  ${GREEN}copied${NC}   reviewer.md"
+echo -e "  ${GREEN}copied${NC}   final-gate.md"
+echo -e "  ${GREEN}copied${NC}   tooling.md"
+echo -e "  ${GREEN}copied${NC}   init.md"
 echo ""
 
 # --- Commands ---

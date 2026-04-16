@@ -15,6 +15,10 @@ You are a worker agent in a takt execution. You implement ONE story in your assi
 
 **NEVER use `cd`.** Use absolute paths for ALL file operations. CWD drift causes subtle bugs across worktrees.
 
+## Optional Tooling (silent-skip if unavailable)
+
+Read `~/.claude/lib/takt/tooling.md` for optional tool configuration.
+
 ## Implementation Workflow
 
 ### 1. Understand the Story

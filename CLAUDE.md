@@ -41,7 +41,7 @@ These phrases trigger prompt file reads, NOT slash commands:
 
 The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. Never route mode commands through it.
 
-**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` for all spawned Tasks. Workers use `model: "haiku"` or `model: "sonnet"` depending on the story's `complexity` field; all other agents (verifier, reviewer, etc.) use `model: "sonnet"`. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
+**CRITICAL — Agent Type Rule:** When launching any takt mode, the session agent MUST read the corresponding prompt file FIRST (`~/.claude/lib/takt/run.md`, `debug.md`, etc.) and follow its instructions exactly. The prompt file specifies `subagent_type: "general-purpose"` for all spawned Tasks. Workers use `model: "haiku"` or `model: "sonnet"` depending on the story's `complexity` field; verifier and retro use `model: "sonnet"`; review gate uses `model: "opus"`. NEVER use custom agent types (e.g. "Seb the boss", TDD agents, or any other named agent). Always `"general-purpose"`.
 
 Slash commands (also in Claude Code):
 - `/feature` — generate a Feature doc from a feature description
@@ -62,9 +62,12 @@ Install: `./install.sh` (one-time, copies prompts to `~/.claude/`)
 7. Final report: stories passed, PR URL, retro summary, total duration
 
 ### Key Files (source -> installed)
-- `lib/run.md` -> `~/.claude/lib/takt/run.md` - Unified orchestrator prompt (replaces solo.md + team-lead.md)
-- `agents/verifier.md` -> `~/.claude/lib/takt/verifier.md` - Deep verification agent
+- `lib/run.md` -> `~/.claude/lib/takt/run.md` - Unified orchestrator prompt
+- `agents/verifier.md` -> `~/.claude/lib/takt/verifier.md` - Scenario verification agent
 - `lib/worker.md` -> `~/.claude/lib/takt/worker.md` - Worker prompt
+- `lib/final-gate.md` -> `~/.claude/lib/takt/final-gate.md` - Unified review gate (conventions + SRE + security + adversary)
+- `lib/tooling.md` -> `~/.claude/lib/takt/tooling.md` - Shared optional tooling config (jCodeMunch + context-mode)
+- `lib/init.md` -> `~/.claude/lib/takt/init.md` - First-run config prompts
 - `lib/debug.md` -> `~/.claude/lib/takt/debug.md` - Debug agent prompt
 - `lib/retro.md` -> `~/.claude/lib/takt/retro.md` - Retro agent prompt
 - `commands/*.md` -> `~/.claude/commands/` - Slash commands
@@ -123,8 +126,8 @@ If an `.md` file has served its purpose, remove it. Don't let stale docs accumul
 | Worker (complex) | sonnet | Per story |
 | Worker (simple) | haiku | Per story, complexity: "simple" |
 | Verifier | sonnet | Per run, after all stories pass |
-| Reviewer | sonnet | Per run, after verification |
-| Bug-fix worker | sonnet | Per bug, in verify-fix loop |
+| Review gate | opus | Per run, after verification (4 passes: conventions, SRE, security, adversary) |
+| Bug-fix worker | sonnet | Per bug, in verify-fix or review-fix loop |
 | Retro agent | sonnet | Per run, end of sprint |
 
 ### Team Mode: Waves

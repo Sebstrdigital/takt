@@ -78,6 +78,22 @@ Merged 3 Feature docs:
 
 ---
 
+## Chronic Tech Debt Check
+
+Before generating stories, check if `.takt/retro.md` exists in the project root. If it contains a `### Chronic Tech Debt` section, extract items with carry count >= 5. Present them to the user:
+
+```
+Chronic tech debt carried 5+ sprints:
+  1. [carried 8x] Clean up stale factories.ts — Suggested story: Delete factories.ts and factories.test.ts
+  2. [carried 5x] Fix flaky test in auth module — Suggested story: Stabilize auth integration test
+
+Include any of these as stories in this sprint? [numbers / none]
+```
+
+Wait for the user's response. If they select items, add them as stories (priority 1, before feature stories) with the suggested story description as the story title. If "none" or no retro.md exists, proceed normally.
+
+---
+
 ## The Job
 
 Take a Feature doc (markdown file or text) and convert it to `sprint.json` in the project root.

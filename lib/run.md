@@ -15,65 +15,8 @@ This phase configures the project for takt on first run and probes optional tool
 
 1. `mkdir -p .takt`
 2. Check if `.takt/config.json` exists and contains `final_gate`, `local_validation`, and `worker_runner` keys.
-3. **If the file is missing or keys are absent**, prompt the user once via `AskUserQuestion` for each missing setting, then write `.takt/config.json` with the answers:
-
-   ```
-   AskUserQuestion:
-     questions:
-       - question: "Phase 4b — Final Gate (Opus reviewer). Previously caught a stakeholder-facing production leak that two review cycles missed. Strongly recommended. Run for this project?"
-         header: "final_gate"
-         multiSelect: false
-         options:
-           - label: "Yes"
-             description: "Run the final-gate agent on every takt run"
-           - label: "No"
-             description: "Skip the final-gate phase for this project"
-       - question: "Phase 4c — Local Validation (runtime checks via .takt/local-validation.md). Run for this project?"
-         header: "local_validation"
-         multiSelect: false
-         options:
-           - label: "Yes"
-             description: "Run the local-validation agent when .takt/local-validation.md exists"
-           - label: "No"
-             description: "Skip the local-validation phase for this project"
-       - question: "Worker runner — who executes story implementations?"
-         header: "worker_runner"
-         multiSelect: false
-         options:
-           - label: "Anthropic"
-             description: "Use Claude Agent tool (Sonnet/Haiku) — best quality, uses Anthropic token budget"
-           - label: "External"
-             description: "Use an external CLI (e.g. OpenCode) — saves Anthropic tokens"
-   ```
-
-4. **If `worker_runner` is `"external"`**, prompt for the external command:
-   ```
-   AskUserQuestion:
-     question: "External worker command. Use {STORY_ID} as placeholder for the story ID."
-     header: "worker_runner_external_cmd"
-     default: "opencode run --dangerously-skip-permissions \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
-   ```
-   If the user confirms the default or provides a custom command, store it in `worker_runner_external_cmd`.
-
-5. Write `.takt/config.json` (using the user's answers, lowercased booleans):
-   ```json
-   {
-     "final_gate": true,
-     "local_validation": true,
-     "worker_runner": "anthropic"
-   }
-   ```
-   Or when external:
-   ```json
-   {
-     "final_gate": true,
-     "local_validation": true,
-     "worker_runner": "external",
-     "worker_runner_external_cmd": "opencode run --dangerously-skip-permissions \"Implement user story {STORY_ID} found in sprint.json. Do this running /worker skill.\""
-   }
-   ```
-
-5. **If `final_gate` is `false`** (either freshly chosen or already in the file), print a loud warning once at Phase 0 and continue:
+3. **If the file is missing or keys are absent**, read `~/.claude/lib/takt/init.md` and follow its instructions to prompt the user and create the config file.
+4. **If `final_gate` is `false`** (either freshly chosen or already in the file), print a loud warning once at Phase 0 and continue:
    ```
    [takt warn] FINAL GATE DISABLED for this project — static review alone has previously missed a stakeholder-facing production leak. Re-enable in .takt/config.json.
    ```
@@ -142,7 +85,7 @@ Or when external:
 }
 ```
 
-Later phases (4b, 4c) read this file to decide whether to run. Phase 2 reads `worker_runner` to decide how to dispatch workers. Worker / verifier / reviewer / final-gate agents read this file to decide whether to prefer jCodeMunch + context-mode tools over built-ins. Note: `worker_runner` only affects story workers — verifier, reviewer, and final-gate always use Anthropic Agent tool.
+Later phases (4, 4b) read this file to decide whether to run. Phase 2 reads `worker_runner` to decide how to dispatch workers. Worker / verifier / review-gate agents read `~/.claude/lib/takt/tooling.md` which references this file for tool availability. Note: `worker_runner` only affects story workers — verifier and review-gate always use Anthropic Agent tool.
 
 ---
 
@@ -334,55 +277,20 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
 
 ---
 
-## Phase 4: Code Review
+## Phase 4: Review Gate (project-toggleable)
 
-**CRITICAL: The reviewer is isolated — it receives only the diff file and CLAUDE.md, never story or scenario data.**
+**This is the unified code review + zero-defect check. It covers conventions, SRE safety, security, and adversarial review in one agent with four passes. Previously caught a stakeholder-facing production leak that the old two-pass review chain missed.**
+
+**Gate check (first step):** Read `.takt/session.json`. If `final_gate` is `false`, skip this entire phase and proceed directly to Phase 4b. Do not print anything here — the Phase 0 warning already informed the user that the gate is disabled for this project. If `final_gate` is `true` or the field is missing, run the phase as described below.
 
 1. Write the diff file:
    ```bash
    git diff main...HEAD > .takt/review.diff
    ```
 
-2. Spawn a reviewer agent with a lean prompt:
+2. Spawn a review gate agent with a lean prompt:
    ```
-   # Code Review
-
-   ## Project Working Directory
-   <absolute path>
-
-   ## Instructions
-   Read ~/.claude/lib/takt/reviewer.md for your instructions.
-   Read .takt/review.diff for the feature branch diff.
-   Read CLAUDE.md for project conventions.
-   Write review-comments.json to the project root.
-   ```
-   Config: `subagent_type: "general-purpose"`, `model: "sonnet"`, `mode: "bypassPermissions"`, `run_in_background: true`
-
-3. Wait for result, then `TaskStop` the reviewer. Read `review-comments.json`. Count must-fix items.
-   - Zero must-fix — proceed to Phase 5.
-   - One or more — enter review-fix loop (max 2 cycles):
-     a. Spawn a fix worker per must-fix comment (same lean pattern as bug fixes). `TaskStop` each after completion.
-     b. After fixes: `git add` + `git commit -m "fix: review - <description>"`
-     c. Re-generate: `git diff main...HEAD > .takt/review.diff`
-     d. Spawn a fresh reviewer
-     e. Wait for result, then `TaskStop` the reviewer. If clean — proceed. If must-fix remain after 2 cycles — note them and proceed anyway (do not block).
-
----
-
-## Phase 4b: Final Gate (project-toggleable — runs after Phase 4)
-
-**This gate exists because a stakeholder found a production connection leak that two review cycles missed. It is strongly recommended for every project and enabled by default.**
-
-**Gate check (first step):** Read `.takt/session.json`. If `final_gate` is `false`, skip this entire phase and proceed directly to Phase 4c. Do not print anything here — the Phase 0 warning already informed the user that the gate is disabled for this project. If `final_gate` is `true` or the field is missing, run the phase as described below.
-
-1. Re-generate the diff (it may have changed from review fixes):
-   ```bash
-   git diff main...HEAD > .takt/review.diff
-   ```
-
-2. Spawn a final-gate agent with a lean prompt:
-   ```
-   # Final Gate Review
+   # Review Gate
 
    ## Project Working Directory
    <absolute path>
@@ -391,27 +299,27 @@ Run only if ALL stories have `passes: true`. If any are blocked, report and STOP
    Read ~/.claude/lib/takt/final-gate.md for your instructions.
    Read .takt/review.diff for the feature branch diff.
    Read CLAUDE.md for project conventions.
-   Write final-gate-comments.json to the project root.
+   Write review-comments.json to the project root.
    ```
    Config: `subagent_type: "general-purpose"`, `model: "opus"`, `mode: "bypassPermissions"`, `run_in_background: true`
 
-   **Model: Opus is mandatory for this phase.** The general reviewer uses Sonnet — the final gate uses the strongest available model. This is the last chance to catch bugs before a human sees the code.
+   **Model: Opus is mandatory for this phase.** This is the only review pass — it uses the strongest available model.
 
-3. Wait for result, then `TaskStop` the gate agent. Read `final-gate-comments.json`.
-   - Verdict `PASSED` — proceed to Phase 5.
-   - Verdict `BLOCKED` — enter gate-fix loop (max 2 cycles):
+3. Wait for result, then `TaskStop` the gate agent. Read `review-comments.json`.
+   - Verdict `PASSED` — proceed to Phase 4b.
+   - Verdict `BLOCKED` — enter review-fix loop (max 2 cycles):
      a. Spawn a fix worker per must-fix finding. `TaskStop` each after completion.
-     b. After fixes: `git add` + `git commit -m "fix: final-gate - <description>"`
-     c. Re-generate diff and re-run the final gate agent.
+     b. After fixes: `git add` + `git commit -m "fix: review - <description>"`
+     c. Re-generate diff and re-run the review gate agent.
      d. If `PASSED` after fixes — proceed. If `BLOCKED` after 2 cycles — STOP. Do not create a PR. Report the unresolved findings to the user.
 
-**When the final gate runs, it NEVER proceeds with unresolved must-fix items — it blocks the PR.** The gate is only skipped when `final_gate: false` is set in the project's `.takt/config.json`.
+**When the review gate runs, it NEVER proceeds with unresolved must-fix items — it blocks the PR.** The gate is only skipped when `final_gate: false` is set in the project's `.takt/config.json`.
 
 ---
 
-## Phase 4c: Local Validation (runs after Phase 4b — project-toggleable)
+## Phase 4b: Local Validation (runs after Phase 4 — project-toggleable)
 
-**This phase exists because static review (Phases 4 and 4b) cannot catch runtime failures. Two bugs escaped to a stakeholder because nobody actually executed the code before shipping.**
+**This phase exists because static review (Phase 4) cannot catch runtime failures. Two bugs escaped to a stakeholder because nobody actually executed the code before shipping.**
 
 ### Gate check
 
@@ -533,7 +441,11 @@ Wait for completion. `TaskStop` the retro agent. Capture the one-line retro summ
    ```
    where N is `fallbackExtraMinutes`. Omit this line entirely when stories ran in parallel as expected.
 
-Note: `sprint.json` is a temporary run artifact. The retro agent reads it for timing stats, then deletes it during cleanup. Do not commit it.
+3. **Stale artifact safety net** — after the retro agent completes, verify cleanup happened. If any of these files still exist, delete them:
+   ```bash
+   rm -f sprint.json .takt/sprint-snapshot.json .takt/scenarios.json .takt/review.diff .takt/validation-report.md bugs.json review-comments.json
+   ```
+   This catches cases where the retro agent failed or skipped cleanup.
 
 ---
 
