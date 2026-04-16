@@ -68,7 +68,7 @@ graph TD
 2. **Scope** — Say `/sprint` to convert Feature docs to sprint.json + `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier). `/sprint` can merge multiple Feature docs into one sprint with wave computation.
 3. **Execute** — Say "start takt". The session agent reads `run.md`, checks `.takt/retro.md` for confirmed alerts (printed as warnings before the start line), auto-detects sequential vs parallel mode from the `waves` field, prints a start line with an ETA (based on per-project timing stats), and orchestrates silently — spawning fresh worker agents for each story. No intermediate output until the final report. If waves were present but parallel execution was unavailable, the final report notes the fallback and time impact.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
-5. **Review** — A code reviewer reads the feature branch diff (`.takt/review.diff`) and produces structured feedback. Must-fix issues trigger automated fix workers. Up to 2 review-fix cycles.
+5. **Review Gate** — A unified review gate (Opus) reads the feature branch diff and runs four passes: convention & quality, SRE/infrastructure, security, and adversarial review. Must-fix items trigger automated fix workers. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
 6. **Ship** — PR is created automatically, retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
 
 ## Information Isolation
@@ -86,8 +86,8 @@ takt enforces strict information boundaries between agents. This is the key arch
                                                     re-verify (max 3 cycles)
 ```
 
-| File | Session Agent | Worker | Verifier | Reviewer |
-|------|--------------|--------|----------|----------|
+| File | Session Agent | Worker | Verifier | Review Gate |
+|------|--------------|--------|----------|-------------|
 | `sprint.json` | reads + updates | never | never | never |
 | `.takt/scenarios.json` | passes path only | **never** | reads | **never** |
 | `bugs.json` | reads (routing) | never | writes | never |
@@ -127,10 +127,13 @@ graph TD
     MG --> WL
     L -- "all done" --> SV["Verifier"]
     WL -- "all done" --> SV
-    SV -- "PASSED" --> CR["Code Review"]
+    SV -- "PASSED" --> CR["Review Gate\n(4-pass Opus)"]
     SV -- "FAILED" --> FW["Fix Workers"]
     FW --> SV
-    CR --> PR["PR + Retro"]
+    CR -- "PASSED" --> LV["Local Validation\n(optional)"]
+    CR -- "BLOCKED" --> FW2["Fix Workers"]
+    FW2 --> CR
+    LV --> PR["PR + Retro"]
 
     style S fill:#1e3a5f,stroke:#3b82f6,color:#93c5fd
     style D fill:#4a3f1a,stroke:#eab308,color:#fde68a
@@ -143,6 +146,8 @@ graph TD
     style MG fill:#4a2f1a,stroke:#f59e0b,color:#fcd34d
     style SV fill:#2d1f4e,stroke:#8b5cf6,color:#c4b5fd
     style CR fill:#4a3f1a,stroke:#eab308,color:#fde68a
+    style LV fill:#3a2a1a,stroke:#f97316,color:#fdba74
+    style FW2 fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
     style PR fill:#1a3a1a,stroke:#22c55e,color:#86efac
     style L fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
     style WL fill:#1a2a3a,stroke:#60a5fa,color:#93c5fd
@@ -156,7 +161,8 @@ start takt
 **Key design properties:**
 - **Session agent handles all git** — workers do file edits only (Read, Edit, Write, Glob, Grep). No Bash, no git, no sub-agent spawning.
 - **Lean prompts** — worker prompts are under 1KB: story JSON + project path + "Read ~/.claude/lib/takt/worker.md for your instructions". No embedded instruction copies.
-- **Diff file for review** — session agent writes `git diff main...HEAD > .takt/review.diff` before spawning the reviewer. Re-generated between review-fix cycles.
+- **Unified review gate** — session agent writes `git diff main...HEAD > .takt/review.diff` and spawns a single Opus agent that runs four passes (conventions, SRE, security, adversary). Re-generated between review-fix cycles.
+- **External worker support** — workers can be dispatched via Claude Agent tool (default) or an external CLI (e.g. OpenCode). Configured per-project in `.takt/config.json`. Verifier, review gate, and retro always use Claude.
 - **Direct implementation** — all story types use direct implementation. BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
 
 Deprecated aliases `takt solo` and `takt team` also work — they read the same `run.md`.
@@ -191,11 +197,13 @@ Triggered automatically after each run completes. The value of retros compounds 
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
 | `.takt/review.diff` | Unified diff for code review (ephemeral) | Session agent | Reviewer only |
 | `bugs.json` | Behavioral bug tickets from failed scenarios | Verifier agent | Session agent, fix workers |
-| `review-comments.json` | Structured review feedback | Reviewer agent | Session agent |
+| `review-comments.json` | Structured review feedback (4-pass) | Review gate agent | Session agent |
 | `.takt/workbooks/workbook-US-XXX.md` | Per-story notes: decisions, files changed, blockers (ephemeral) | Each worker agent | Session agent |
 | `.takt/stats.json` | Per-project timing stats for ETA estimation (persistent) | Retro agent | Session agent |
 | `.takt/retro.md` | Retrospective entries + active alerts | `takt retro` agent | Human |
-| `tasks/prd-*.md` | Source PRD documents | `/takt-prd` command | Human |
+| `.takt/config.json` | Per-project toggles (final gate, local validation, worker runner) | Phase 0 first-run setup | Session agent |
+| `.takt/session.json` | Per-run tool availability cache (jCodeMunch, context-mode) | Phase 0 | All agents |
+| `tasks/feature-*.md` | Source Feature documents | `/feature` command | Human |
 | `tasks/archive/` | Completed PRDs, auto-archived on finish | Session agent | Human |
 
 ## Installation
@@ -220,15 +228,17 @@ cd takt && git pull && ./install.sh
 |-- lib/takt/
 |   |-- run.md                # Unified orchestrator prompt (session-level)
 |   |-- verifier.md           # Scenario verification + bug ticket agent
-|   |-- reviewer.md           # Code review agent
+|   |-- final-gate.md         # Review gate (conventions + SRE + security + adversary)
 |   |-- worker.md             # Worker agent prompt (file edits only)
+|   |-- tooling.md            # Shared optional tooling config (jCodeMunch + context-mode)
+|   |-- init.md               # First-run config prompts (Phase 0)
 |   |-- debug.md              # Debug mode agent prompt
 |   +-- retro.md              # Retro mode agent prompt
 |-- commands/
 |   |-- takt.md               # /takt -- planning entry point (Epic → Feature → Sprint → start takt)
 |   |-- epic.md               # /epic -- define a high-level Epic
 |   |-- feature.md            # /feature -- generate Feature doc
-|   +-- sprint.md             # /sprint -- convert Feature doc to sprint.json
+|   +-- sprint.md             # /sprint -- convert Feature doc to sprint.json (checks chronic debt)
 +-- CLAUDE.md                 # takt section appended
 ```
 
