@@ -2,6 +2,7 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-09-24: takt v3 — replace run.md orchestration mechanics (TeamCreate, manual wave loop, per-agent TaskStop, model guard, parallel fallback) with the takt-run Workflow script (lib/takt-run.js): deterministic waves, per-story worktrees, overlap-sorted merge stage, verify-fix and review-fix loops, resume via runId; workers now come from the shared ~/.claude/agents roster (grunt/builder/heavy) instead of general-purpose; /orchestrator skill v2 shrunk to roster + gates and documents Workflow vs Agent mechanics
 - 2026-03-29: Add agent cleanup — TaskStop every spawned agent immediately after completion, TeamDelete after all waves; eliminates 15-20 zombie agent tabs per parallel run
 - 2026-03-29: Add explicit per-story timing — jq commands for startTime (before dispatch) and endTime (after commit) in both sequential and parallel modes; fixes empty timing data across 7+ consecutive runs
 - 2026-03-29: Add sprint.json snapshot — orchestrator copies sprint.json to .takt/sprint-snapshot.json before retro; retro reads snapshot with graceful fallback; fixes "timing stats unavailable" in 4 repos this week

@@ -66,7 +66,7 @@ graph TD
 
 1. **Plan** — Say `/takt` to start. For large initiatives, `/epic` defines the Epic and loops through all Features automatically (Why > What > What Not per Feature). For small changes, the Quick path runs a 3-question interview and goes straight to sprint.json.
 2. **Scope** — Say `/sprint` to convert Feature docs to sprint.json + `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier). `/sprint` can merge multiple Feature docs into one sprint with wave computation.
-3. **Execute** — Say "start takt". The session agent reads `run.md`, checks `.takt/retro.md` for confirmed alerts (printed as warnings before the start line), auto-detects sequential vs parallel mode from the `waves` field, prints a start line with an ETA (based on per-project timing stats), and orchestrates silently — spawning fresh worker agents for each story. No intermediate output until the final report. If waves were present but parallel execution was unavailable, the final report notes the fallback and time impact.
+3. **Execute** — Say "start takt". The session agent reads `run.md`, checks `.takt/retro.md` for confirmed alerts (printed as warnings before the start line), prints a start line with an ETA (based on per-project timing stats), then hands stories, verification and the review gate to the `takt-run` Workflow script. Each wave runs fresh workers in parallel git worktrees; a merge stage commits, merges (fewest shared files first), removes the worktrees and updates `sprint.json`. No intermediate output until the final report. An interrupted run resumes from the workflow run id.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
 5. **Review Gate** — A unified review gate (Opus) reads the feature branch diff and runs four passes: convention & quality, SRE/infrastructure, security, and adversarial review. Must-fix items trigger automated fix workers. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
 6. **Ship** — PR is created automatically, retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
@@ -105,11 +105,11 @@ This is prompt-level architectural isolation, not cryptographic enforcement. The
 
 ### start takt — Unified Execution
 
-The session agent reads `sprint.json`, auto-detects mode, and orchestrates directly. No intermediary orchestrator — the session agent IS the orchestrator.
+The session agent reads `sprint.json`, prepares the branch, and runs the `takt-run` Workflow script (`lib/takt-run.js`). The session agent IS the orchestrator; the script owns the deterministic parts (waves, retries, verify-fix and review-fix loops, resume).
 
-**Mode auto-detection** from the `waves` field in sprint.json:
-- **Sequential** — `waves` is empty or missing: stories run in priority order, independent stories may run in parallel
-- **Parallel** — any wave has 2+ stories: uses `TeamCreate` with `isolation: "worktree"` for parallel wave execution
+**Mode** from the `waves` field in sprint.json:
+- **Sequential** — `waves` is empty or missing: one story per wave, edited in place, committed by the merge stage
+- **Parallel** — any wave has 2+ stories: each story runs in its own worktree (`.claude/worktrees/`), merged `--no-ff` in fewest-overlap-first order
 
 ```mermaid
 graph TD
@@ -159,11 +159,12 @@ start takt
 ```
 
 **Key design properties:**
-- **Session agent handles all git** — workers do file edits only (Read, Edit, Write, Glob, Grep). No Bash, no git, no sub-agent spawning.
-- **Lean prompts** — worker prompts are under 1KB: story JSON + project path + "Read ~/.claude/lib/takt/worker.md for your instructions". No embedded instruction copies.
-- **Unified review gate** — session agent writes `git diff main...HEAD > .takt/review.diff` and spawns a single Opus agent that runs four passes (conventions, SRE, security, adversary). Re-generated between review-fix cycles.
-- **External worker support** — workers can be dispatched via Claude Agent tool (default) or an external CLI (e.g. OpenCode). Configured per-project in `.takt/config.json`. Verifier, review gate, and retro always use Claude.
-- **Direct implementation** — all story types use direct implementation. BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
+- **Workers never run git** — they edit files, run the project's checks, write a workbook and return a structured result. A mechanical merge stage (`grunt`/`builder` with exact commands) commits, merges and cleans up worktrees.
+- **Shared agent roster** — workers are the same named agents the `/orchestrator` skill uses (`~/.claude/agents/`): `grunt` (haiku) for simple stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry.
+- **Lean prompts** — worker prompts are under 1KB: story JSON + paths + "Read ~/.claude/lib/takt/worker.md". Structured returns are enforced by JSON schema, not prose.
+- **Unified review gate** — an Opus agent writes `git diff main...HEAD > .takt/review.diff` and runs four passes (conventions, SRE, security, adversary). Re-run between review-fix cycles.
+- **External worker support** — story workers can be dispatched via an external CLI (e.g. OpenCode) from `.takt/config.json`. Verifier, review gate, and retro always use Claude.
+- **Direct implementation** — BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
 
 Deprecated aliases `takt solo` and `takt team` also work — they read the same `run.md`.
 
@@ -226,7 +227,8 @@ cd takt && git pull && ./install.sh
 ```
 ~/.claude/
 |-- lib/takt/
-|   |-- run.md                # Unified orchestrator prompt (session-level)
+|   |-- run.md                # Orchestrator prompt (session-level)
+|   |-- takt-run.js           # Workflow script: story waves, merge, verify loop, review gate
 |   |-- verifier.md           # Scenario verification + bug ticket agent
 |   |-- final-gate.md         # Review gate (conventions + SRE + security + adversary)
 |   |-- worker.md             # Worker agent prompt (file edits only)
@@ -277,8 +279,9 @@ Requires a session restart to take effect.
 
 ## Prerequisites
 
-- [Claude Code CLI](https://claude.com/claude-code) installed and authenticated
-- A git repository for your project
+- [Claude Code CLI](https://claude.com/claude-code) installed and authenticated, with the Workflow tool available
+- The shared agent roster from [claude-tools](https://github.com/Sebstrdigital/claude-tools) installed in `~/.claude/agents/` (`grunt`, `builder`, `heavy`)
+- A git repository for your project; start the Claude Code session from its root (worktrees are keyed to the session repo)
 
 ## References
 

@@ -205,7 +205,7 @@ Each story has a `size` field used for progress tracking and ETA estimation. tak
 
 ## Story Complexity: Model Tier Routing
 
-Each story has a `complexity` field used to route it to the appropriate model tier. This is a **cost-efficiency** feature — simple stories don't need a powerful model.
+Each story has a `complexity` field used to route it to a worker from the shared agent roster: `"simple"` → `grunt` (haiku), `"complex"` → `builder` (sonnet). A failed attempt is retried once on `heavy` (opus). This is a **cost-efficiency** feature — simple stories don't need a powerful model.
 
 **Values:** `"simple"` | `"complex"`
 

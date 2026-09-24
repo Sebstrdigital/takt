@@ -111,7 +111,9 @@ cp "$SCRIPT_DIR/lib/retro.md" "$TAKT_DIR/retro.md"
 cp "$SCRIPT_DIR/lib/final-gate.md" "$TAKT_DIR/final-gate.md"
 cp "$SCRIPT_DIR/lib/tooling.md" "$TAKT_DIR/tooling.md"
 cp "$SCRIPT_DIR/lib/init.md" "$TAKT_DIR/init.md"
+cp "$SCRIPT_DIR/lib/takt-run.js" "$TAKT_DIR/takt-run.js"
 echo -e "  ${GREEN}copied${NC}   run.md"
+echo -e "  ${GREEN}copied${NC}   takt-run.js"
 echo -e "  ${GREEN}copied${NC}   verifier.md"
 echo -e "  ${GREEN}copied${NC}   worker.md"
 echo -e "  ${GREEN}copied${NC}   debug.md"
@@ -145,7 +147,7 @@ generate_takt_section() {
 For non-trivial work (3+ stories), suggest takt: `/feature` → `/sprint` → `start takt`.
 Before entering plan mode, ask: takt Feature or native plan?
 
-**Agent Type Rule:** Read the prompt file first (`~/.claude/lib/takt/run.md`, etc.), use `subagent_type: "general-purpose"` and `model: "sonnet"` for all spawned Tasks. Never use custom/named agent types.
+**Execution:** `start takt` → the session agent reads `~/.claude/lib/takt/run.md` and runs it itself (never as a sub-agent). Stories, verification and the review gate run inside the `takt-run` Workflow script; workers come from the shared agent roster in `~/.claude/agents/` (`grunt` simple / `builder` complex / `heavy` retry). Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `opus`.
 <!-- takt:end -->
 SECTION
 }
