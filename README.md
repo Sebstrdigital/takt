@@ -68,7 +68,7 @@ graph TD
 2. **Scope** — Say `/sprint` to convert Feature docs to sprint.json + `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier). `/sprint` can merge multiple Feature docs into one sprint with wave computation.
 3. **Execute** — Say "start takt". The session agent reads `run.md`, checks `.takt/retro.md` for confirmed alerts (printed as warnings before the start line), prints a start line with an ETA (based on per-project timing stats), then hands stories, verification and the review gate to the `takt-run` Workflow script. Each wave runs fresh workers in parallel git worktrees; a merge stage commits, merges (fewest shared files first), removes the worktrees and updates `sprint.json`. No intermediate output until the final report. An interrupted run resumes from the workflow run id.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets. Fresh workers fix the bugs without seeing scenarios. Up to 3 verify-fix cycles.
-5. **Review Gate** — A unified review gate (Opus) reads the feature branch diff and runs four passes: convention & quality, SRE/infrastructure, security, and adversarial review. Must-fix items trigger automated fix workers. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
+5. **Review Gate** — A unified review gate (Fable) reads the feature branch diff and runs four passes: convention & quality, SRE/infrastructure, security, and adversarial review. Must-fix items trigger automated fix workers. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
 6. **Ship** — PR is created automatically, retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
 
 ## Information Isolation
@@ -127,7 +127,7 @@ graph TD
     MG --> WL
     L -- "all done" --> SV["Verifier"]
     WL -- "all done" --> SV
-    SV -- "PASSED" --> CR["Review Gate\n(4-pass Opus)"]
+    SV -- "PASSED" --> CR["Review Gate\n(4-pass Fable)"]
     SV -- "FAILED" --> FW["Fix Workers"]
     FW --> SV
     CR -- "PASSED" --> LV["Local Validation\n(optional)"]
@@ -162,7 +162,7 @@ start takt
 - **Workers never run git** — they edit files, run the project's checks, write a workbook and return a structured result. A mechanical merge stage (`grunt`/`builder` with exact commands) commits, merges and cleans up worktrees.
 - **Shared agent roster** — workers are the same named agents the `/orchestrator` skill uses (`~/.claude/agents/`): `grunt` (haiku) for simple stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry.
 - **Lean prompts** — worker prompts are under 1KB: story JSON + paths + "Read ~/.claude/lib/takt/worker.md". Structured returns are enforced by JSON schema, not prose.
-- **Unified review gate** — an Opus agent writes `git diff main...HEAD > .takt/review.diff` and runs four passes (conventions, SRE, security, adversary). Re-run between review-fix cycles.
+- **Unified review gate** — a Fable agent writes `git diff main...HEAD > .takt/review.diff` and runs four passes (conventions, SRE, security, adversary). Re-run between review-fix cycles.
 - **External worker support** — story workers can be dispatched via an external CLI (e.g. OpenCode) from `.takt/config.json`. Verifier, review gate, and retro always use Claude.
 - **Direct implementation** — BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
 

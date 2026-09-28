@@ -43,6 +43,7 @@ Append a new entry to `.takt/retro.md`:
 - Stories blocked: Z
 - Total workbooks: N
 - Avg story duration: Xs (small), Ys (medium), Zs (large)
+- Retried stories: M/N needed the heavy (opus) retry; K blocked after retry
 - Phase overhead: Xs (verification + review)
 ```
 
@@ -146,6 +147,8 @@ Compute per-story durations from `startTime`/`endTime` and update `.takt/stats.j
 
 **Step 3 — Overhead**: Calculate `overhead = retro_start_time - last_story_endTime` (the latest `endTime` across all stories). This captures the combined time spent on verification + review phases. Do not count retro duration — it runs after the user-facing work is done.
 
+**Step 3b — Retries**: Each story carries an `attempts` field (1 = first worker succeeded, 2 = the heavy/opus retry ran). Count over all stories that were scheduled this run (have a `startTime`): `scheduled` = total, `retried` = stories with `attempts >= 2`, `blockedAfterRetry` = retried stories whose `passes` is still `false`. Stories without an `attempts` field (runs before this field existed) count as `attempts = 1`. This is the data for deciding whether the first-attempt worker tier is good enough or should move up a model tier.
+
 **Step 4 — Update `.takt/stats.json`**: Read the existing file (or start fresh if missing). For each size tier with new data, update using a running average:
 ```
 new_avg = ((old_avg * old_count) + sum_of_new_durations) / (old_count + new_count)
@@ -153,7 +156,7 @@ new_fastest = min(old_fastest, new_fastest)
 new_slowest = max(old_slowest, new_slowest)
 new_count = old_count + new_count
 ```
-Update overhead the same way (single running average). Increment `runs` count. Set `updatedAt`.
+Update overhead the same way (single running average). Add this run's `scheduled` / `retried` / `blockedAfterRetry` to the `retries` totals (plain sums, create the block if missing). Increment `runs` count. Set `updatedAt`.
 
 **Schema** for `.takt/stats.json`:
 ```json
@@ -166,6 +169,7 @@ Update overhead the same way (single running average). Increment `runs` count. S
     }
   },
   "overhead": { "avg": 340, "count": 1 },
+  "retries": { "scheduled": 5, "retried": 1, "blockedAfterRetry": 0 },
   "updatedAt": "2026-03-07T14:00:00Z"
 }
 ```

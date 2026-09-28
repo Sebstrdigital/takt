@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is takt?
 
-takt is a sprint discipline layer for Claude Code: stories with acceptance criteria, hidden BDD scenarios verified by an independent agent, an Opus review gate, and compounding retros. Primary command: `start takt`. Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
+takt is a sprint discipline layer for Claude Code: stories with acceptance criteria, hidden BDD scenarios verified by an independent agent, a Fable review gate, and compounding retros. Primary command: `start takt`. Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
 
 There is no bash script or CLI binary. The user says "start takt" in Claude Code. The session agent reads `run.md`, prepares the run, and hands stories / verification / review gate to the `takt-run` Workflow script (`lib/takt-run.js`). Claude Code's native Agent and Workflow tools provide the orchestration mechanics; takt provides the process and state model.
 
@@ -50,7 +50,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 1. User says "start takt"
 2. Session agent reads `~/.claude/lib/takt/run.md`
 3. Phase 0-1: config, tool probes, feature branch, ETA from `.takt/stats.json`, retro alerts, one start line
-4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), a merge stage that commits/merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the 4-pass Opus gate with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
+4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), a merge stage that commits/merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the 4-pass Fable gate with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
 5. Phase 4b-7: local validation (interactive), PR, auto-retro, final report — session agent
 6. Output: start line + final report only
 
@@ -78,6 +78,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 - `dependsOn`: story IDs this story depends on; a blocked dependency blocks the story
 - `complexity`: `"simple"` (grunt/haiku) or `"complex"` (builder/sonnet)
 - `size`: `small|medium|large` for ETA stats
+- `attempts`: written by the merge stage; `1` = first worker succeeded, `2` = the `heavy` retry ran. Retro sums these into `.takt/stats.json` `retries`
 - `waves`: top-level; each wave with 2+ stories runs in parallel worktrees, one story per wave runs in place
 
 ## Development Workflow
@@ -129,7 +130,7 @@ Keep the repo lean. Every markdown file must justify its presence.
 | Merge / commit stage | `builder` (worktrees) / `grunt` (in place) | sonnet / haiku | Per wave, per fix cycle |
 | Verifier | `general-purpose` | sonnet | Per verify cycle (max 3) |
 | Bug-fix / review-fix worker | `builder` | sonnet | Per bug / must-fix |
-| Review gate | `general-purpose` | opus | Per review cycle (max 2) |
+| Review gate | `general-purpose` | fable | Per review cycle (max 2) |
 | Local validation | `builder` | sonnet | Per run, if enabled |
 | Retro agent | `general-purpose` | sonnet | Per run |
 

@@ -147,7 +147,7 @@ generate_takt_section() {
 For non-trivial work (3+ stories), suggest takt: `/feature` → `/sprint` → `start takt`.
 Before entering plan mode, ask: takt Feature or native plan?
 
-**Execution:** `start takt` → the session agent reads `~/.claude/lib/takt/run.md` and runs it itself (never as a sub-agent). Stories, verification and the review gate run inside the `takt-run` Workflow script; workers come from the shared agent roster in `~/.claude/agents/` (`grunt` simple / `builder` complex / `heavy` retry). Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `opus`.
+**Execution:** `start takt` → the session agent reads `~/.claude/lib/takt/run.md` and runs it itself (never as a sub-agent). Stories, verification and the review gate run inside the `takt-run` Workflow script; workers come from the shared agent roster in `~/.claude/agents/` (`grunt` simple / `builder` complex / `heavy` retry). Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `fable`.
 <!-- takt:end -->
 SECTION
 }

@@ -13,7 +13,7 @@ This file is read by the orchestrator (run.md Phase 0.1) only when `.takt/config
    ```
    AskUserQuestion:
      questions:
-       - question: "Phase 4b — Final Gate (Opus reviewer). Previously caught a stakeholder-facing production leak that two review cycles missed. Strongly recommended. Run for this project?"
+       - question: "Phase 4b — Final Gate (Fable reviewer). Previously caught a stakeholder-facing production leak that two review cycles missed. Strongly recommended. Run for this project?"
          header: "final_gate"
          multiSelect: false
          options:

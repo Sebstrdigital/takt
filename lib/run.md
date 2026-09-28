@@ -90,7 +90,7 @@ Build `args`:
 | `baseBranch` | `"main"` unless the project's default branch differs |
 | `taktLib` | absolute path of `~/.claude/lib/takt` (expand `~`) |
 | `stories` | `jq '[.userStories[] | select(.passes == false)]' sprint.json` (full story objects) |
-| `waves` | `sprint.json.waves` filtered to incomplete stories; omit if empty; one id per wave when the submodule check fired |
+| `waves` | `sprint.json.waves` filtered to incomplete stories, **converted to an array of id arrays** — `[["US-001","US-002"],["US-003"]]`, not the `{wave, stories}` objects sprint.json stores (the script does `w.filter(...)` on each wave); omit if empty; one id per wave when the submodule check fired. Known limitation (2026-09-28): waves with 2+ stories run in Workflow worktrees cut from the HEAD at workflow launch, so a later multi-story wave does not see earlier waves' merges — keep dependent stories in single-story waves, or relaunch the remainder after wave 1 |
 | `workerRunner` | `.takt/session.json.worker_runner` |
 | `externalCmd` | `.takt/session.json.worker_runner_external_cmd` (or `""`) |
 | `finalGate` | `.takt/session.json.final_gate` |
@@ -110,7 +110,7 @@ Wait for the task notification. The result is:
 
 ```json
 {
-  "stories": [{ "id": "US-001", "title": "...", "status": "done|blocked", "reason": "...", "files": [] }],
+  "stories": [{ "id": "US-001", "title": "...", "status": "done|blocked", "reason": "...", "files": [], "attempts": 1 }],
   "verification": { "ran": true, "verdict": "PASSED|FAILED", "cycles": 1, "openBugs": [] },
   "gate": { "ran": true, "verdict": "PASSED|BLOCKED|SKIPPED", "cycles": 1, "openMustFix": [], "suggestionCount": 0 },
   "blocked": []
@@ -209,7 +209,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 1. **Never write application code** — you orchestrate only.
 2. **Session cwd = project git root** — Workflow worktrees are keyed to it.
 3. **Never read `.takt/scenarios.json`** — only the verifier inside the workflow does.
-4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); verifier and retro `general-purpose` + `sonnet`; gate `general-purpose` + `opus`. Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
+4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); verifier and retro `general-purpose` + `sonnet`; gate `general-purpose` + `fable`. Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
 5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`.
 6. **Kill agents you spawn directly** — `TaskStop` the validation and retro agents as soon as you have their result. Workflow agents are managed by the Workflow tool.
 7. **Never kill tmux panes.**
