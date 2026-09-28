@@ -53,7 +53,18 @@ p { margin: 0 0 12px; max-width: 68ch; }
 code { font-family: var(--font-mono); font-size: 0.9em; background: color-mix(in srgb, var(--fg) 7%, transparent); padding: 1px 5px; border-radius: 3px; }
 
 /* Pipeline strip */
-.pipeline { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin: 20px 0 8px; }
+.pipeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 20px 0 8px; }
+.bus { margin-top: 14px; }
+.bus .row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.bus .row:last-child { border-bottom: 0; }
+.bus .name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; min-width: 0; word-break: break-word; }
+.bus .hop { min-width: 0; font-size: 14px; }
+.bus .hop b { font-weight: 600; }
+.bus .lost { color: var(--fg-3); font-size: 13px; margin-top: 2px; }
+.bus .ok { color: var(--good); font-family: var(--font-mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.bus .bad { color: var(--crit); font-family: var(--font-mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+@media (max-width: 560px) { .bus .row { grid-template-columns: 1fr; gap: 4px; } }
+.rule { border-left: 3px solid var(--warn); padding: 10px 16px; margin-top: 14px; background: var(--surface); max-width: 72ch; }
 .stage { border: 1px solid var(--line); border-top-width: 4px; background: var(--surface); padding: 10px 10px 12px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .stage .name { font-weight: 600; font-size: 13.5px; line-height: 1.2; }
 .stage .sub { color: var(--fg-3); font-family: var(--font-mono); font-size: 11px; line-height: 1.35; }
@@ -120,7 +131,7 @@ a { color: var(--accent); }
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">Process audit · 2026-09-29</div>
+  <div class="eyebrow">Process audit · 2026-09-29 · revision 2</div>
   <h1>Which takt stages earn their keep</h1>
   <p class="lede">Evidence from 22 repos, 1,164 story commits and every retro since February. Each stage is judged on what it actually changed in code, not on what its prompt says it does.</p>
   <div class="meta">
@@ -147,6 +158,7 @@ a { color: var(--accent); }
     <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Trim</span><div class="name">Retro</div><div class="sub">stats + tooling bugs read<br>alert lifecycle and carry counts read by nobody</div></div>
     <div class="stage cut" role="listitem"><span class="pill cut"><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="2"/></svg>Retire</span><div class="name">Debug mode</div><div class="sub">lib/debug.md<br>no use since Feb; /diagnose is a superset</div></div>
     <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Fix</span><div class="name">Docs &amp; rules</div><div class="sub">4 contradictions<br>3 stale references, 1 wrong pass count</div></div>
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Half wired</span><div class="name">Artifact bus</div><div class="sub">files between contexts<br>5 of 8 hops work; the 2 loop files and the feature doc do not board</div></div>
   </div>
 
   <div class="stats">
@@ -171,7 +183,7 @@ a { color: var(--accent); }
     <div class="panel">
       <h3><span class="dot" style="background:var(--warn)"></span>Where value leaks</h3>
       <ul>
-        <li><b>Gate findings never reach you.</b> <code>review-comments.json</code> has no reader in code. Only <code>suggestionCount</code> survives, as the PR draft flag. The 11 should-fix items from the shadow run were shown to no one.<span class="src">stage-map.md § outputs nobody reads</span></li>
+        <li><b>The loop files are written but never read by the next agent.</b> <code>bugs.json</code> and <code>review-comments.json</code> are the intended handoff, yet fix workers get a subset inline and cycle 2 reviews cold. The 11 should-fix items from the shadow run reached no agent and no human before cleanup deleted them.<span class="src">see The artifact bus below</span></li>
         <li><b>The verifier asserts without reading.</b> "Verifier hallucinates findings" carried 16 sprints in uven. Two parakeet cycles burned on an unregistered test file and a stale doc line. Windows sprint 4 failed 14/15 on a stale index, passed 15/15 when told to read files. <code>verifier.md</code> unchanged since April.<span class="src">retro-evidence.md § 2.3</span></li>
         <li><b>Hidden scenarios are not independent.</b> <code>/sprint</code> writes them in the same context, right after the acceptance criteria. So verification finds test gaps, not design bugs.<span class="src">sprint.md:482 vs :490-535</span></li>
         <li><b>The gate checklist is web-shaped.</b> SQL injection, <code>NODE_ENV</code>, DB transactions, load simulation, run against a Swift menu-bar app. The per-project hook exists and no repo uses it.<span class="src">final-gate.md · .takt/final-gate-checklist.md</span></li>
@@ -180,6 +192,18 @@ a { color: var(--accent); }
       </ul>
     </div>
   </div>
+
+  <h2>The artifact bus</h2>
+  <p class="lede">takt's files are not for a human. They hand work from one context window to the next. So the test is: is the intended reader told to read the file, and what survives the hop? Traced through every prompt builder and every <span class="mono">lib/*.md</span>.</p>
+  <div class="panel bus">
+    <div class="row"><div class="name">.takt/scenarios.json<br><span class="ok">works</span></div><div class="hop"><b>/sprint to verifier.</b> Verifier is told to read it. Hidden from workers as designed.</div></div>
+    <div class="row"><div class="name">workbooks<br><span class="ok">works</span></div><div class="hop"><b>worker to merge agent and retro.</b> Both read it. Only gap: the heavy retry gets a one-line reason, not attempt 1's workbook.</div></div>
+    <div class="row"><div class="name">validation-report, session.json, stats.json, retro.md, sprint.json<br><span class="ok">works</span></div><div class="hop"><b>Orchestrator, retro, next run.</b> Each reader is pointed at the file.</div></div>
+    <div class="row"><div class="name">bugs.json<br><span class="bad">not read</span></div><div class="hop"><b>verifier to fix workers and verifier cycle 2.</b> Fix workers get the same four fields inline from the structured output. Cycle 2's prompt never mentions cycle 1's file, so it re-verifies everything cold.<div class="lost">Lost: cycle memory. Parakeet re-opened BUG-001 twice on new false positives because cycle 2 had no record of cycle 1.</div></div></div>
+    <div class="row"><div class="name">review-comments.json<br><span class="bad">not read</span></div><div class="hop"><b>gate to fix workers and gate cycle 2.</b> Fix workers get <span class="mono">id, pass, file, description</span>. <span class="mono">line, evidence, impact</span> stay in the file. Cycle 2 reviews cold. Suggestions are in neither the schema nor any prompt, and Phase 7 deletes the file.<div class="lost">Lost: evidence for the fixer, every should-fix suggestion, cycle memory. Shadow MF-1 cycle 2 invalidated cycle 1's fix.</div></div></div>
+    <div class="row"><div class="name">tasks/feature-*.md<br><span class="bad">never boards</span></div><div class="hop"><b>/feature to /sprint only.</b> Worker gets the story JSON. Gate gets the diff and CLAUDE.md. Retro archives the doc.<div class="lost">Lost: the why, scope edges, "what we are not building". The gate cannot check spec compliance because it is never given the spec.</div></div></div>
+  </div>
+  <div class="rule"><b>The pattern.</b> Every hop with one channel works. The two loop hops have two channels, file and structured output, and the prompts wire only the narrower one. The producer writes the full record to disk; the consumer receives a summary. <b>Rule to adopt: one channel per hop.</b> For the loops the file should be the channel, since it carries history across cycles and full evidence without growing the orchestrator's context. That is P10.</div>
 
   <h2>Evidence</h2>
   <div class="figrow">
@@ -206,17 +230,18 @@ a { color: var(--accent); }
     <tbody>
       <tr><td class="id">P9</td><td class="stage-c">Docs &amp; rules</td><td>Fix the drift: "three passes" at <code>final-gate.md:140</code>, stale <code>type</code>/<code>verify</code> fields in takt.md and README, README claiming <code>bugs.json</code> is read, <code>tooling.md</code> vs the <code>.takt/</code> read ban, duplicated cleanup list.</td><td>Confusion</td><td class="eff">trivial</td><td class="eff">none</td></tr>
       <tr><td class="id">P8</td><td class="stage-c">Debug mode</td><td>Retire <code>lib/debug.md</code>. <code>takt debug</code> points at <code>/diagnose</code> for the method and <code>/debug</code> for breadcrumbs.</td><td>86 lines</td><td class="eff">trivial</td><td class="eff">none</td></tr>
+      <tr><td class="id">P10</td><td class="stage-c">Artifact bus</td><td>One channel per hop. (a) <code>bugs.json</code> and <code>review-comments.json</code> carry <code>cycle</code> and <code>status</code> per entry; cycle N+1 is pointed at the file and told to confirm open items before raising new ones, never re-litigate fixed ones. (b) Fix workers are pointed at the file entry, so evidence, impact and line arrive. (c) Schemas shrink to verdict, counts, path. (d) Suggestions are copied to the PR body or <code>TODO.md</code> before cleanup. (e) Gate and worker get the feature doc path so the spec boards.</td><td>Cycle memory, full evidence, suggestions survive, spec reaches reviewers</td><td class="eff">small to medium</td><td class="eff">larger fixer prompts</td></tr>
       <tr><td class="id">P6</td><td class="stage-c">Retro</td><td>Drop alert lifecycle and carry counts. Chronic debt goes once to the project's <code>TODO.md</code>. Add <code>startedAt</code>/<code>finishedAt</code> to the verifier, gate and commit schemas so overhead splits by stage. Keep the last 3 entries.</td><td>25 ritual lines; the missing metric</td><td class="eff">small</td><td class="eff">none</td></tr>
       <tr><td class="id">P1</td><td class="stage-c">Merge stage</td><td>Workers commit their own story at the end of <code>worker.md</code> (add its files, commit, jq). Merge agent spawned only for waves with 2+ stories.</td><td>About 6 Haiku spawns per run</td><td class="eff">small</td><td class="eff">worker stages junk; cleanFiles list moves into the prompt</td></tr>
       <tr><td class="id">P3</td><td class="stage-c">Verifier</td><td>(a) "Read the file before asserting anything about it" as a mandatory step. (b) Skip jCodeMunch unless <code>indexed_commit == HEAD</code>. (c) Generate scenarios in a fresh agent from the feature doc, or route through <code>/spec</code>.</td><td>Fewer false-positive cycles</td><td class="eff">small (a, b), medium (c)</td><td class="eff">(c) changes /sprint</td></tr>
       <tr><td class="id">P5</td><td class="stage-c">Local validation</td><td><code>manual_check: false</code> in config makes the question opt-in. dikta's script drives the built app or is removed.</td><td>One blocking prompt per run</td><td class="eff">small</td><td class="eff">none</td></tr>
-      <tr><td class="id">P4</td><td class="stage-c">Review gate</td><td>Should-fix items go into the PR body or the completion report. Per-stack checklist files (swift, web) selected from config. Adopt deep-review's triage and "do not re-litigate a cycle-1 fix". Add a skeptic-style spec-compliance pass.</td><td>Findings reach a human; native repos stop reading web checks</td><td class="eff">medium</td><td class="eff">longer gate on Fable; measure with P6b first</td></tr>
+      <tr><td class="id">P4</td><td class="stage-c">Review gate</td><td>Per-stack checklist files (swift, web) selected from config. With P10e in place, add a skeptic-style spec-compliance pass as pass 5.</td><td>Native repos stop reading web checks; the gate checks the diff against the story</td><td class="eff">medium</td><td class="eff">longer gate on Fable; measure with P6b first</td></tr>
       <tr><td class="id">P7</td><td class="stage-c">Planning</td><td><code>/spec</code> becomes the canonical producer of sprint.json and scenarios.json. <code>/feature</code> keeps the doc. Resolve the typecheck and story-size contradictions in the surviving file.</td><td>Two paths become one</td><td class="eff">medium</td><td class="eff">muscle memory for /sprint</td></tr>
       <tr><td class="id">P2</td><td class="stage-c">Worker</td><td>Read the attempts data from the next 2 to 3 runs before touching the builder tier. Already wired.</td><td>Nothing yet</td><td class="eff">none</td><td class="eff">none</td></tr>
     </tbody>
   </table>
   </div>
-  <div class="order"><b>Suggested order.</b> P9 and P8 today. P6 before P4 so the gate change can be measured. P1 and P3a/b next, they remove the two documented failure sources. P4, P7 and P3c after two runs of data.</div>
+  <div class="order"><b>Suggested order.</b> P9 and P8 today. P10a-d next: largest value for the least code, and it removes the cause of both documented cycle-2 regressions. P6 before P4 so the gate change can be measured. P1 and P3a/b after that. P4, P7, P3c and P10e after two runs of data.</div>
   <p class="note"><b>Not proposed:</b> merging the verifier into the gate. The two find different defect classes (spec conformance vs runtime and security), and fixing the verifier's read-before-assert gap is cheaper than losing it.</p>
 
   <h2>Skills that could take over a stage</h2>
