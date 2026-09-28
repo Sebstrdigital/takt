@@ -39,7 +39,7 @@ The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. 
 
 **CRITICAL — Execution Rule:** On `start takt` the session agent MUST read `~/.claude/lib/takt/run.md` first and execute it itself. Never spawn the orchestrator as a sub-agent, never echo the phrase back, never ask for confirmation. Story execution happens inside the Workflow tool (`scriptPath: ~/.claude/lib/takt/takt-run.js`), which is an approved use of Workflow — no separate opt-in is needed.
 
-**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `grunt`/`builder` for the merge and commit stages. Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `general-purpose` + `opus`. Never invent other agent types.
+**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `grunt`/`builder` for the merge and commit stages. Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `general-purpose` + `fable`. Never invent other agent types.
 
 Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`.
 

@@ -1,0 +1,336 @@
+<title>takt Process Audit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+/* Layout: a pipeline strip on top (the thing being audited), then evidence, then the decision table. Engineering-notebook tone, tabular data, sparse color. */
+:root {
+  --bg: #f7f6f2;
+  --surface: #fcfcfb;
+  --fg: #16160f;
+  --fg-2: #52514e;
+  --fg-3: #7a7973;
+  --line: #dedcd4;
+  --accent: #2a78d6;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --good: #0ca30c;
+  --warn: #b57700;
+  --crit: #d03b3b;
+  --good-bg: #e6f4e6;
+  --warn-bg: #fbeed3;
+  --crit-bg: #f9e2e2;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161614; --surface: #1f1f1c; --fg: #f2f1ea; --fg-2: #c3c2b7; --fg-3: #8f8e86; --line: #343430;
+    --accent: #3987e5; --series-1: #3987e5; --series-2: #d95926;
+    --good: #35c035; --warn: #f0b429; --crit: #ee6b6b;
+    --good-bg: #1c2e1c; --warn-bg: #352b12; --crit-bg: #3a1d1d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161614; --surface: #1f1f1c; --fg: #f2f1ea; --fg-2: #c3c2b7; --fg-3: #8f8e86; --line: #343430;
+  --accent: #3987e5; --series-1: #3987e5; --series-2: #d95926;
+  --good: #35c035; --warn: #f0b429; --crit: #ee6b6b;
+  --good-bg: #1c2e1c; --warn-bg: #352b12; --crit-bg: #3a1d1d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 4.5vw, 44px); line-height: 1.05; margin: 0 0 8px; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; margin: 48px 0 12px; letter-spacing: -0.005em; }
+h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.lede { color: var(--fg-2); font-size: 16px; max-width: 70ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 6px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-3); margin-top: 16px; }
+.meta b { color: var(--fg-2); font-weight: 500; }
+.mono { font-family: var(--font-mono); font-size: 0.92em; }
+code { font-family: var(--font-mono); font-size: 0.9em; background: color-mix(in srgb, var(--fg) 7%, transparent); padding: 1px 5px; border-radius: 3px; }
+
+/* Pipeline strip */
+.pipeline { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin: 20px 0 8px; }
+.stage { border: 1px solid var(--line); border-top-width: 4px; background: var(--surface); padding: 10px 10px 12px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.stage .name { font-weight: 600; font-size: 13.5px; line-height: 1.2; }
+.stage .sub { color: var(--fg-3); font-family: var(--font-mono); font-size: 11px; line-height: 1.35; }
+.stage.keep { border-top-color: var(--good); }
+.stage.fix  { border-top-color: var(--warn); }
+.stage.cut  { border-top-color: var(--crit); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; width: fit-content; }
+.pill svg { width: 10px; height: 10px; }
+.pill.keep { background: var(--good-bg); color: var(--good); }
+.pill.fix  { background: var(--warn-bg); color: var(--warn); }
+.pill.cut  { background: var(--crit-bg); color: var(--crit); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 4px; display: inline-block; }
+@media (max-width: 860px) { .pipeline { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Two-column strong / improve */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); background: var(--surface); padding: 18px 20px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-size: 20px; font-weight: 500; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.panel h3 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.panel ul { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.panel li { padding-left: 14px; position: relative; }
+.panel li::before { content: ""; position: absolute; left: 0; top: 0.65em; width: 6px; height: 2px; background: var(--fg-3); }
+.panel li b { font-weight: 600; }
+.panel li .src { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-3); margin-top: 2px; }
+
+/* Charts */
+.figure { border: 1px solid var(--line); background: var(--surface); padding: 16px 18px 12px; margin-top: 14px; min-width: 0; }
+.figure .title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.figure .subtitle { color: var(--fg-3); font-size: 12.5px; margin-bottom: 10px; }
+.figrow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .figrow { grid-template-columns: 1fr; } }
+svg text { font-family: var(--font-body); fill: var(--fg-2); font-size: 12px; }
+svg text.val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+svg .axis { stroke: var(--line); stroke-width: 1; }
+.bar { cursor: default; }
+.bar:hover rect { filter: brightness(1.12); }
+.tip { position: fixed; pointer-events: none; background: var(--fg); color: var(--bg); font-family: var(--font-mono); font-size: 12px; padding: 6px 9px; border-radius: 3px; opacity: 0; transition: opacity 120ms; white-space: nowrap; z-index: 10; }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+.chart-legend { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); margin-top: 6px; }
+.chart-legend i { width: 10px; height: 10px; display: inline-block; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+@media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; min-width: 0; }
+.stat .n { font-family: var(--font-display); font-size: 30px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--fg-3); font-size: 12.5px; margin-top: 4px; line-height: 1.3; }
+
+/* Proposals table */
+.tablewrap { overflow-x: auto; margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-3); font-weight: 500; border-bottom: 1px solid var(--line); padding: 8px 10px 8px 0; white-space: nowrap; }
+td { border-bottom: 1px solid var(--line); padding: 10px 10px 10px 0; vertical-align: top; }
+td.id { font-family: var(--font-mono); color: var(--fg-3); white-space: nowrap; }
+td.stage-c { font-weight: 600; white-space: nowrap; }
+.eff { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.order { border-left: 3px solid var(--accent); padding: 10px 16px; margin-top: 16px; background: var(--surface); max-width: 70ch; }
+.order b { font-weight: 600; }
+.note { color: var(--fg-3); font-size: 13px; margin-top: 14px; max-width: 70ch; }
+a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Process audit · 2026-09-29</div>
+  <h1>Which takt stages earn their keep</h1>
+  <p class="lede">Evidence from 22 repos, 1,164 story commits and every retro since February. Each stage is judged on what it actually changed in code, not on what its prompt says it does.</p>
+  <div class="meta">
+    <span><b>Scope</b> 22 repos</span>
+    <span><b>Story commits</b> 1,164</span>
+    <span><b>Fix commits classified</b> 159</span>
+    <span><b>Retro entries read</b> 58</span>
+    <span><b>Prompt lines mapped</b> 2,300</span>
+  </div>
+
+  <h2>The pipeline, stage by stage</h2>
+  <div class="legend">
+    <span><i style="background:var(--good)"></i>Keep, still strong</span>
+    <span><i style="background:var(--warn)"></i>Keep, needs a fix</span>
+    <span><i style="background:var(--crit)"></i>Cut or retire</span>
+  </div>
+  <div class="pipeline" role="list">
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Fix</span><div class="name">Planning</div><div class="sub">/epic /feature /sprint /spec<br>22 human gates per epic, rules contradict</div></div>
+    <div class="stage keep" role="listitem"><span class="pill keep"><svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>Keep</span><div class="name">Worker</div><div class="sub">builder / grunt / heavy<br>rarely blocks; first-attempt rate measurable from next run</div></div>
+    <div class="stage cut" role="listitem"><span class="pill cut"><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="2"/></svg>Cut down</span><div class="name">Merge stage</div><div class="sub">1 Haiku agent per story<br>0 wins, 3 recorded failures</div></div>
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Fix</span><div class="name">Verifier</div><div class="sub">hidden BDD scenarios<br>80 % real fixes, but asserts without reading</div></div>
+    <div class="stage keep" role="listitem"><span class="pill keep"><svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>Keep</span><div class="name">Review gate</div><div class="sub">4-pass, Fable<br>best catches in the history; output half wasted</div></div>
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Fix</span><div class="name">Local validation</div><div class="sub">3 repos define it<br>strong when it runs the app, ritual when it re-runs tests</div></div>
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Trim</span><div class="name">Retro</div><div class="sub">stats + tooling bugs read<br>alert lifecycle and carry counts read by nobody</div></div>
+    <div class="stage cut" role="listitem"><span class="pill cut"><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="2"/></svg>Retire</span><div class="name">Debug mode</div><div class="sub">lib/debug.md<br>no use since Feb; /diagnose is a superset</div></div>
+    <div class="stage fix" role="listitem"><span class="pill fix"><svg viewBox="0 0 10 10"><path d="M5 1 9 9H1z" fill="currentColor"/></svg>Fix</span><div class="name">Docs &amp; rules</div><div class="sub">4 contradictions<br>3 stale references, 1 wrong pass count</div></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">80 %</div><div class="l">of verifier fixes are real bugs (40 of 50)</div></div>
+    <div class="stat"><div class="n">66 %</div><div class="l">of review-gate fixes are real bugs (73 of 109)</div></div>
+    <div class="stat"><div class="n">6 / 16</div><div class="l">agent spawns per clean 6-story run go to the merge stage</div></div>
+    <div class="stat"><div class="n">23×</div><div class="l">longest a retro item was carried without being done (kraken)</div></div>
+  </div>
+
+  <h2>Still strong</h2>
+  <div class="split">
+    <div class="panel">
+      <h3><span class="dot" style="background:var(--good)"></span>What is working</h3>
+      <ul>
+        <li><b>The review gate finds what nothing else does.</b> OIDC CSRF state and stored XSS in uven, a cross-tenant FK guard in sepanel, an auth rate-limit bypass and an OOM vector in nettobrand, a data race and an orphaned Chrome process in dikta. It also repaired a shipping fallback a verify fix had broken the same day.<span class="src">git-evidence.md § top 10 · retro-evidence.md § 2.4</span></li>
+        <li><b>Verifier fixes are the cleanest fixes in the history.</b> When it fires, 4 of 5 fixes are behavioral. Sparkle delegate wiring and appcast overwrite in dikta, the WKWebView getUserMedia hang, email enumeration in uven.<span class="src">git-evidence.md § overall</span></li>
+        <li><b>Local validation catches integration bugs</b> where it runs the real service: two uven events that never reached a recipient, green in tests, verifier and gate.<span class="src">retro-evidence.md § 2.5</span></li>
+        <li><b>Retro surfaces tooling bugs that got fixed.</b> Worktree base cut at launch HEAD, waves shape mismatch, empty timing data across 7 runs. Each led to a takt commit.<span class="src">retro-evidence.md § 2.6</span></li>
+        <li><b>The roster model is sound.</b> Sonnet workers rarely block; defects surface downstream where a stronger model reads the diff. No Revert commit undoes any gate fix.<span class="src">git-evidence.md</span></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3><span class="dot" style="background:var(--warn)"></span>Where value leaks</h3>
+      <ul>
+        <li><b>Gate findings never reach you.</b> <code>review-comments.json</code> has no reader in code. Only <code>suggestionCount</code> survives, as the PR draft flag. The 11 should-fix items from the shadow run were shown to no one.<span class="src">stage-map.md § outputs nobody reads</span></li>
+        <li><b>The verifier asserts without reading.</b> "Verifier hallucinates findings" carried 16 sprints in uven. Two parakeet cycles burned on an unregistered test file and a stale doc line. Windows sprint 4 failed 14/15 on a stale index, passed 15/15 when told to read files. <code>verifier.md</code> unchanged since April.<span class="src">retro-evidence.md § 2.3</span></li>
+        <li><b>Hidden scenarios are not independent.</b> <code>/sprint</code> writes them in the same context, right after the acceptance criteria. So verification finds test gaps, not design bugs.<span class="src">sprint.md:482 vs :490-535</span></li>
+        <li><b>The gate checklist is web-shaped.</b> SQL injection, <code>NODE_ENV</code>, DB transactions, load simulation, run against a Swift menu-bar app. The per-project hook exists and no repo uses it.<span class="src">final-gate.md · .takt/final-gate-checklist.md</span></li>
+        <li><b>Retro carries what it cannot resolve.</b> 23×, 18×, 14× carries. The "chronic after 5" tier changed nothing. Items closed only when you scoped a sprint to them by hand.<span class="src">retro-evidence.md § 3</span></li>
+        <li><b>One blocking question inside an unattended run.</b> Local validation ends in <code>AskUserQuestion</code> every time.<span class="src">run.md:131-152</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Evidence</h2>
+  <div class="figrow">
+    <div class="figure">
+      <div class="title">Fix commits by stage</div>
+      <div class="subtitle">All takt repos, classified from subject, numstat and 10 read diffs. ±10 points.</div>
+      <svg id="c1" viewBox="0 0 480 190" width="100%" role="img" aria-label="Fix commits by stage: verify 50 with 40 real, review 109 with 73 real, retro 58 with 5 real, local validation 0 recorded"></svg>
+      <div class="chart-legend"><span><i style="background:var(--series-1)"></i>Real behavioral fix</span><span><i style="background:var(--series-2)"></i>Cosmetic, docs, config, test-only</span></div>
+    </div>
+    <div class="figure">
+      <div class="title">Real catches per repo</div>
+      <div class="subtitle">Verify plus review fixes classified as real. Gates pay off on runtime-heavy product code.</div>
+      <svg id="c2" viewBox="0 0 480 370" width="100%" role="img" aria-label="Real gate catches per repo: uven 37, nettobrand 16, kraken 15, dikta 11, munin 9, sepanel 8, dua-erp 4, others 0 to 3"></svg>
+      <div class="chart-legend"><span><i style="background:var(--series-1)"></i>Verify</span><span><i style="background:var(--series-2)"></i>Review gate</span></div>
+    </div>
+  </div>
+  <p class="note">Overhead after the last story merged averages 2,025 s in dikta against 236 to 674 s per story, but that bucket is not split by stage anywhere. Verifier vs gate vs retro cost cannot be separated from existing data. Proposal P6b fixes that.</p>
+
+  <h2>Proposals</h2>
+  <p>Ranked by value over effort. None applied. Full text and rationale in <span class="mono">docs/process-audit-2026-09-29/README.md</span>.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>#</th><th>Stage</th><th>Proposal</th><th>Effect</th><th>Effort</th><th>Risk</th></tr></thead>
+    <tbody>
+      <tr><td class="id">P9</td><td class="stage-c">Docs &amp; rules</td><td>Fix the drift: "three passes" at <code>final-gate.md:140</code>, stale <code>type</code>/<code>verify</code> fields in takt.md and README, README claiming <code>bugs.json</code> is read, <code>tooling.md</code> vs the <code>.takt/</code> read ban, duplicated cleanup list.</td><td>Confusion</td><td class="eff">trivial</td><td class="eff">none</td></tr>
+      <tr><td class="id">P8</td><td class="stage-c">Debug mode</td><td>Retire <code>lib/debug.md</code>. <code>takt debug</code> points at <code>/diagnose</code> for the method and <code>/debug</code> for breadcrumbs.</td><td>86 lines</td><td class="eff">trivial</td><td class="eff">none</td></tr>
+      <tr><td class="id">P6</td><td class="stage-c">Retro</td><td>Drop alert lifecycle and carry counts. Chronic debt goes once to the project's <code>TODO.md</code>. Add <code>startedAt</code>/<code>finishedAt</code> to the verifier, gate and commit schemas so overhead splits by stage. Keep the last 3 entries.</td><td>25 ritual lines; the missing metric</td><td class="eff">small</td><td class="eff">none</td></tr>
+      <tr><td class="id">P1</td><td class="stage-c">Merge stage</td><td>Workers commit their own story at the end of <code>worker.md</code> (add its files, commit, jq). Merge agent spawned only for waves with 2+ stories.</td><td>About 6 Haiku spawns per run</td><td class="eff">small</td><td class="eff">worker stages junk; cleanFiles list moves into the prompt</td></tr>
+      <tr><td class="id">P3</td><td class="stage-c">Verifier</td><td>(a) "Read the file before asserting anything about it" as a mandatory step. (b) Skip jCodeMunch unless <code>indexed_commit == HEAD</code>. (c) Generate scenarios in a fresh agent from the feature doc, or route through <code>/spec</code>.</td><td>Fewer false-positive cycles</td><td class="eff">small (a, b), medium (c)</td><td class="eff">(c) changes /sprint</td></tr>
+      <tr><td class="id">P5</td><td class="stage-c">Local validation</td><td><code>manual_check: false</code> in config makes the question opt-in. dikta's script drives the built app or is removed.</td><td>One blocking prompt per run</td><td class="eff">small</td><td class="eff">none</td></tr>
+      <tr><td class="id">P4</td><td class="stage-c">Review gate</td><td>Should-fix items go into the PR body or the completion report. Per-stack checklist files (swift, web) selected from config. Adopt deep-review's triage and "do not re-litigate a cycle-1 fix". Add a skeptic-style spec-compliance pass.</td><td>Findings reach a human; native repos stop reading web checks</td><td class="eff">medium</td><td class="eff">longer gate on Fable; measure with P6b first</td></tr>
+      <tr><td class="id">P7</td><td class="stage-c">Planning</td><td><code>/spec</code> becomes the canonical producer of sprint.json and scenarios.json. <code>/feature</code> keeps the doc. Resolve the typecheck and story-size contradictions in the surviving file.</td><td>Two paths become one</td><td class="eff">medium</td><td class="eff">muscle memory for /sprint</td></tr>
+      <tr><td class="id">P2</td><td class="stage-c">Worker</td><td>Read the attempts data from the next 2 to 3 runs before touching the builder tier. Already wired.</td><td>Nothing yet</td><td class="eff">none</td><td class="eff">none</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="order"><b>Suggested order.</b> P9 and P8 today. P6 before P4 so the gate change can be measured. P1 and P3a/b next, they remove the two documented failure sources. P4, P7 and P3c after two runs of data.</div>
+  <p class="note"><b>Not proposed:</b> merging the verifier into the gate. The two find different defect classes (spec conformance vs runtime and security), and fixing the verifier's read-before-assert gap is cheaper than losing it.</p>
+
+  <h2>Skills that could take over a stage</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Stage</th><th>Skill / agent</th><th>Fit</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="stage-c">Review gate</td><td class="mono">/deep-review</td><td>Adopt parts</td><td>SRE and security passes near-identical. Lift its triage and convergence rule. Checklists are Next.js/Drizzle/Supabase-specific and sub-agent spawning from a Workflow agent is unverified.</td></tr>
+      <tr><td class="stage-c">Review gate</td><td class="mono">skeptic</td><td>Add as pass</td><td>The gate never checks "does the diff satisfy the story". Skeptic's refute-against-spec stance fills that hole.</td></tr>
+      <tr><td class="stage-c">Review gate</td><td class="mono">/code-review (plugin)</td><td>No</td><td>Needs a GitHub PR, posts comments, drops findings under 80 confidence.</td></tr>
+      <tr><td class="stage-c">Scenario authoring</td><td class="mono">/spec</td><td>Drop-in, pre-run</td><td>Already emits scenarios.json with an adversarial "would a lazy implementation pass this" check that /sprint lacks.</td></tr>
+      <tr><td class="stage-c">Verify-fix loop</td><td class="mono">/diagnose (phases 1-2)</td><td>Adapt</td><td>Feedback loop first, reproduce before fix. Interactive pauses become "record and continue".</td></tr>
+      <tr><td class="stage-c">Verifier</td><td class="mono">/tdd</td><td>No</td><td>Writes visible tests with user plan approval. The verifier's value is hidden scenarios.</td></tr>
+      <tr><td class="stage-c">Debug mode</td><td class="mono">/diagnose + /debug</td><td>Replace</td><td>Superset of lib/debug.md.</td></tr>
+      <tr><td class="stage-c">Merge, retro, local validation</td><td>none</td><td>Gap</td><td>Bespoke. Nothing on disk covers them. No native-app (Swift) review checklist exists anywhere either.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Still unmeasured</h2>
+  <ul style="max-width:70ch; padding-left:18px; margin:0;">
+    <li>First-attempt worker success rate. Data starts with the next run.</li>
+    <li>Fable vs Opus at the gate. The change landed today.</li>
+    <li>Per-stage overhead. P6b.</li>
+    <li>Whether gate findings hide inside story commits in repos with stories but no fix commits (cs-kb-agent, mcp-servers, dua-factory).</li>
+    <li>Whether a Workflow agent can spawn sub-agents, which /deep-review needs.</li>
+  </ul>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+  const tip = document.getElementById('tip');
+  function showTip(e, text) { tip.textContent = text; tip.style.opacity = 1; moveTip(e); }
+  function moveTip(e) { tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; }
+  function hideTip() { tip.style.opacity = 0; }
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+  function bind(g, text) { g.classList.add('bar'); g.addEventListener('mouseenter', e => showTip(e, text)); g.addEventListener('mousemove', moveTip); g.addEventListener('mouseleave', hideTip); }
+
+  // Chart 1: fix commits by stage, stacked real / other, horizontal
+  (function () {
+    const svg = document.getElementById('c1');
+    const rows = [
+      { name: 'Review gate', real: 73, other: 36 },
+      { name: 'Retro', real: 5, other: 53 },
+      { name: 'Verifier', real: 40, other: 10 },
+      { name: 'Local validation', real: 0, other: 0 },
+    ];
+    const left = 118, right = 16, top = 12, rowH = 36, barH = 18, W = 480;
+    const max = 120, plotW = W - left - right;
+    const x = v => left + v / max * plotW;
+    [0, 30, 60, 90, 120].forEach(t => {
+      el('line', { x1: x(t), x2: x(t), y1: top - 4, y2: top + rows.length * rowH, class: 'grid' }, svg);
+      const tx = el('text', { x: x(t), y: top + rows.length * rowH + 16, 'text-anchor': 'middle', class: 'val' }, svg); tx.textContent = t;
+    });
+    rows.forEach((r, i) => {
+      const y = top + i * rowH + (rowH - barH) / 2;
+      const lbl = el('text', { x: left - 10, y: y + barH / 2 + 4, 'text-anchor': 'end' }, svg); lbl.textContent = r.name;
+      const total = r.real + r.other;
+      if (total === 0) {
+        const t = el('text', { x: left + 4, y: y + barH / 2 + 4, class: 'val' }, svg); t.textContent = '0 recorded';
+        return;
+      }
+      const g = el('g', {}, svg);
+      el('rect', { x: x(0), y, width: Math.max(0, x(r.real) - x(0)), height: barH, fill: 'var(--series-1)', rx: 0 }, g);
+      if (r.other) el('rect', { x: x(r.real) + 2, y, width: Math.max(0, x(r.real + r.other) - x(r.real) - 2), height: barH, fill: 'var(--series-2)' }, g);
+      const t = el('text', { x: x(total) + 6, y: y + barH / 2 + 4, class: 'val' }, svg);
+      t.textContent = total + ' (' + Math.round(r.real / total * 100) + '% real)';
+      bind(g, r.name + ': ' + r.real + ' real, ' + r.other + ' other, ' + total + ' total');
+    });
+    el('line', { x1: x(0), x2: x(0), y1: top - 4, y2: top + rows.length * rowH, class: 'axis' }, svg);
+  })();
+
+  // Chart 2: real catches per repo, stacked verify / review, horizontal
+  (function () {
+    const svg = document.getElementById('c2');
+    const rows = [
+      { name: 'uven', v: 13, r: 24 },
+      { name: 'nettobrand', v: 6, r: 10 },
+      { name: 'kraken', v: 5, r: 10 },
+      { name: 'dikta', v: 4, r: 7 },
+      { name: 'munin', v: 2, r: 7 },
+      { name: 'sepanel_oribium', v: 3, r: 5 },
+      { name: 'dua-erp', v: 1, r: 3 },
+      { name: 'korpen', v: 2, r: 1 },
+      { name: 'cs-agent-saas', v: 0, r: 2 },
+      { name: 'kraken-wrapper', v: 2, r: 0 },
+      { name: 'dua-pulse', v: 2, r: 0 },
+      { name: 'takt', v: 0, r: 1 },
+      { name: 'apisix-waf', v: 0, r: 1 },
+      { name: 'simplybrf api', v: 0, r: 1 },
+      { name: 'simplybrf User-Web', v: 0, r: 1 },
+      { name: '7 repos with 0', v: 0, r: 0 },
+    ];
+    const left = 118, right = 16, top = 10, rowH = 21, barH = 13, W = 480;
+    const max = 40, plotW = W - left - right;
+    const x = v => left + v / max * plotW;
+    [0, 10, 20, 30, 40].forEach(t => {
+      el('line', { x1: x(t), x2: x(t), y1: top - 4, y2: top + rows.length * rowH, class: 'grid' }, svg);
+      const tx = el('text', { x: x(t), y: top + rows.length * rowH + 16, 'text-anchor': 'middle', class: 'val' }, svg); tx.textContent = t;
+    });
+    rows.forEach((r, i) => {
+      const y = top + i * rowH + (rowH - barH) / 2;
+      const lbl = el('text', { x: left - 10, y: y + barH / 2 + 4, 'text-anchor': 'end' }, svg); lbl.textContent = r.name;
+      const total = r.v + r.r;
+      if (total === 0) { const t = el('text', { x: left + 4, y: y + barH / 2 + 4, class: 'val' }, svg); t.textContent = '0'; return; }
+      const g = el('g', {}, svg);
+      if (r.v) el('rect', { x: x(0), y, width: x(r.v) - x(0), height: barH, fill: 'var(--series-1)' }, g);
+      if (r.r) el('rect', { x: x(r.v) + (r.v ? 2 : 0), y, width: Math.max(0, x(total) - x(r.v) - (r.v ? 2 : 0)), height: barH, fill: 'var(--series-2)' }, g);
+      const t = el('text', { x: x(total) + 6, y: y + barH / 2 + 4, class: 'val' }, svg); t.textContent = total;
+      bind(g, r.name + ': ' + r.v + ' verify, ' + r.r + ' review');
+    });
+    el('line', { x1: x(0), x2: x(0), y1: top - 4, y2: top + rows.length * rowH, class: 'axis' }, svg);
+  })();
+})();
+</script>
