@@ -2,6 +2,8 @@
 
 **Question:** which takt stages catch real problems, which are ritual, and where would an existing Claude Code skill do the job better?
 
+**Status 2026-09-29:** tranche 1 applied and installed in commit `cb8c97e`: P1, P3a/b, P6, P8, P9, P10a-d. Deferred until two runs of data exist: P2 (read attempts), P4 (per-stack gate checklist, spec-compliance pass), P7 (planning consolidation), P3c (independent scenario generation), P10e (feature doc onto the bus).
+
 **Revision 2 (same day):** Sebastian clarified that takt's files exist to hand work between context windows, not for a human to read. Section 4 traces every handoff on that basis and proposal P10 follows from it. Earlier findings stand.
 
 **Method:** four read-only scouts mined every `.takt/retro.md` and `stats.json` under `work/git/` (22 repos, 1,164 story commits), the takt CHANGELOG and archived PRDs, every prompt file in `lib/`, `agents/`, `commands/`, the git history of fix commits per stage, and the skill/agent inventory in `~/.claude/`. Evidence files are next to this README: `retro-evidence.md`, `git-evidence.md`, `stage-map.md`, `skill-overlap.md`. Numbers from git classification are roughly plus or minus 10 points.
