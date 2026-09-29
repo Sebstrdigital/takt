@@ -2,9 +2,11 @@
 
 Read `.takt/session.json` if it exists. Use the availability flags to select tools.
 
-## jCodeMunch (when `jcodemunch.available` is `true`)
+## jCodeMunch (only when the index is current)
 
-Prefer jCodeMunch MCP tools over Grep/Glob/Read for code navigation:
+Use jCodeMunch only when `.takt/session.json.jcodemunch.indexed_commit` equals the output of `git rev-parse --short HEAD` (compare the prefix). Otherwise do not call any jCodeMunch tool and say "jCodeMunch skipped: index at <commit>, HEAD at <commit>" once in your notes.
+
+When current, prefer jCodeMunch MCP tools over Grep/Glob/Read for code navigation:
 - `mcp__jcodemunch__search_symbols` to locate symbols
 - `mcp__jcodemunch__get_file_outline` to understand file structure without reading it whole
 - `mcp__jcodemunch__get_symbol_source` to fetch a single symbol's source

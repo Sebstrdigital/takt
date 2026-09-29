@@ -87,9 +87,20 @@ VERIFICATION: FAILED
 
 Use `VERIFICATION: PASSED` only if ALL scenarios pass (100%). Otherwise use `VERIFICATION: FAILED`.
 
-### Step 5: On Failure, Generate bugs.json
+### Step 4b: Confirm before you assert
 
-If any scenarios fail, generate a `bugs.json` file in the project root.
+Every claim that a file, symbol, test or line exists or does not exist must be backed by a direct read in this session (`cat`, `sed -n`, `grep -n`, `ls`). Quote the output in the report next to the claim. A failure without a quoted read is not recordable — re-check it or drop it.
+
+Registration claims (a test file "not in the target", a symbol "not referenced") must be checked in the build/project file itself, not inferred from the file tree or from memory.
+
+### Step 5: Maintain bugs.json
+
+`bugs.json` in the project root is the single handoff channel: fix workers read it to find their entry, and the next verify cycle reads it to see what was already reported. The prompt tells you the current cycle number N.
+
+- **Cycle 1:** overwrite any existing `bugs.json` (it is stale from an aborted run). Write it only if something failed. If the verdict is `PASSED`, delete any existing `bugs.json` (`rm -f`) so no stale file remains.
+- **Cycle N+1:** read the existing `bugs.json` FIRST. For every entry with status `open`, re-check it. Set status `fixed` if the behaviour is now correct, otherwise leave it `open` (same id, never a duplicate). Never delete entries. Never re-open a `fixed` entry; if a fix broke something else, that is a new entry.
+- **New defects** are appended with `cycle: N` and ids continuing the numbering (`BUG-004` after `BUG-003`).
+- **`dismissed`** only when you conclude the original report was wrong. Add a `note` field saying why.
 
 **CRITICAL — Bug descriptions must be BEHAVIORAL. They describe what is broken from a user perspective. They must NOT contain:**
 - Given/When/Then text
@@ -107,6 +118,8 @@ The required format:
   "bugs": [
     {
       "id": "BUG-001",
+      "cycle": 1,
+      "status": "open",
       "description": "Form accepts empty email without showing validation error",
       "expected": "Validation error should be displayed when email field is empty",
       "actual": "Form submits successfully with empty email field"
@@ -115,7 +128,9 @@ The required format:
 }
 ```
 
-Each bug entry must have exactly these four fields: `id`, `description`, `expected`, `actual`. Write this file so that fix workers can pick it up and drive targeted fixes without any knowledge of the scenario structure.
+Status vocabulary: `open` | `fixed` | `dismissed`. Every entry has `id`, `cycle`, `status`, `description`, `expected`, `actual`; `dismissed` entries also carry `note`.
+
+**Return contract:** `verdict` is `PASSED` only when all scenarios pass and no entry is `open`. Otherwise return `FAILED` with `bugsPath` (absolute path of `bugs.json`), `openBugIds` (ids of every entry with status `open`), `newBugCount` and `fixedBugCount` for this cycle. Do not return the bug details inline.
 
 ## Rules
 

@@ -69,8 +69,7 @@ Merge `.takt/config.json` with the probe results:
    ```
 5. **Detect mode** from `waves`: sequential if empty/missing or every wave has 1 story; parallel if any wave has 2+.
 6. **Estimate duration** from `.takt/stats.json` (`stories.bySize.<size>.avg` per story + `overhead.avg`; defaults small=120s, medium=180s, large=300s, overhead=480s). Print as `estimate × 0.8` to `estimate × 1.3`, rounded to 5 min.
-7. **Retro alerts** — for each row with Status `confirmed` in `.takt/retro.md`, print `[takt warn] <alert text>` before the start line.
-8. Print the start line and nothing else:
+7. Print the start line and nothing else:
    ```
    takt started — <branchName> (<N> stories, <mode>, ~15-25 min)
    ```
@@ -111,18 +110,21 @@ Wait for the task notification. The result is:
 ```json
 {
   "stories": [{ "id": "US-001", "title": "...", "status": "done|blocked", "reason": "...", "files": [], "attempts": 1 }],
-  "verification": { "ran": true, "verdict": "PASSED|FAILED", "cycles": 1, "openBugs": [] },
-  "gate": { "ran": true, "verdict": "PASSED|BLOCKED|SKIPPED", "cycles": 1, "openMustFix": [], "suggestionCount": 0 },
+  "verification": { "ran": true, "verdict": "PASSED|FAILED", "cycles": 1, "openBugs": ["BUG-002"] },
+  "gate": { "ran": true, "verdict": "PASSED|BLOCKED|SKIPPED", "cycles": 1, "openMustFix": ["MF-003"], "suggestionCount": 0 },
+  "timing": { "verify": [], "gate": [], "fixes": [], "merges": [], "commits": [] },
   "blocked": []
 }
 ```
+
+`openBugs` and `openMustFix` are id arrays. Details live in `bugs.json` and `review-comments.json` in the project root.
 
 **Resume:** if the workflow is interrupted, re-invoke with the same `scriptPath` + `args` and `resumeFromRunId: "<runId from the launch result>"` — completed stories replay from cache.
 
 **Stop conditions** (no PR, no retro; print the final report with the reason):
 - any story `blocked`
-- `verification.verdict != "PASSED"` — list `openBugs`
-- `gate.verdict == "BLOCKED"` — list `openMustFix`
+- `verification.verdict != "PASSED"` — list the `openBugs` ids, with each entry's description from `bugs.json`
+- `gate.verdict == "BLOCKED"` — list the `openMustFix` ids, with each entry's finding from `review-comments.json`
 
 The workflow already committed every story (feature commits), merged worktrees, removed them, and updated `passes` / `startTime` / `endTime` in `sprint.json`. Verify with `git status --short` that only ephemeral files are dirty; if a worktree or `worktree-*` branch is left behind, remove it (`git worktree remove --force <path>`; `git branch -D <name>`).
 
@@ -155,18 +157,20 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 
 ## Phase 5: PR Creation
 
-1. `command -v gh` missing → skip to Phase 6.
+1. `command -v gh` missing → do step 6, then skip to Phase 6.
 2. `git push -u origin <branchName>`
-3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration.
+3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration. If `review-comments.json` exists, read it and append a section `## Review suggestions (should-fix)` with one line per `SF-*` entry: ``- SF-00n `file:line` — finding``. No `SF-*` entries → omit the section.
 4. `--draft` if `gate.suggestionCount > 0`.
 5. `gh pr create --title "feat: <summary>" --body "<body>" [--draft]` → capture URL.
+6. **No PR (`gh` missing)** — before Phase 6 cleanup deletes `review-comments.json`, append the same `SF-*` list to the project's TODO file: the first of `TODO.md` or `docs/TODO.md` that exists, else create `TODO.md` in the project root, under `## takt review suggestions — <branchName> — <YYYY-MM-DD>` (skip if there are no `SF-*` entries). Not on a stop condition: a stop keeps the files for resume.
 
 ---
 
 ## Phase 6: Auto-Retro
 
 1. `cp sprint.json .takt/sprint-snapshot.json`
-2. Spawn the retro agent:
+2. Write the Workflow's returned JSON verbatim to `.takt/run-report.json` (you have it in context; a heredoc via Bash is fine).
+3. Spawn the retro agent:
    ```
    # Auto-Retro
    ## Project Working Directory
@@ -175,6 +179,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
    <branchName>
    ## Instructions
    Read ~/.claude/lib/takt/retro.md for your instructions.
+   Read .takt/run-report.json for per-stage timing and story attempts.
    Process workbooks from .takt/workbooks/, generate the retro entry, update CHANGELOG.md, clean up workbooks and .takt/review.diff, commit and push.
    Output a one-line summary.
    ```
@@ -189,16 +194,16 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
    ```
    takt complete — <branchName>
    - Stories: X/Y passed [Z blocked]
-   - Verification: PASSED (1 cycle) | FAILED — <n> open bugs
-   - Gate: PASSED (1 cycle) | BLOCKED — <n> must-fix | SKIPPED
+   - Verification: PASSED (1 cycle) | FAILED — <n> open bugs (ids)
+   - Gate: PASSED (1 cycle) | BLOCKED — <n> open must-fix (ids) | SKIPPED
    - PR: <URL or "skipped">
    - Retro: <one-line summary>
    - Duration: N min
    ```
-   On a stop condition, replace `takt complete` with `takt stopped` and add one line per open bug / must-fix / blocked story.
+   On a stop condition, replace `takt complete` with `takt stopped` and add one line per open bug id / must-fix id / blocked story.
 3. **Stale artifact safety net** — if the retro ran and any of these still exist, delete them:
    ```bash
-   rm -f sprint.json .takt/sprint-snapshot.json .takt/scenarios.json .takt/review.diff .takt/validation-report.md bugs.json review-comments.json
+   rm -f sprint.json .takt/sprint-snapshot.json .takt/scenarios.json .takt/review.diff .takt/validation-report.md .takt/run-report.json bugs.json review-comments.json
    ```
    Do NOT delete them on a stop condition — the user needs them to resume.
 
@@ -209,10 +214,10 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 1. **Never write application code** — you orchestrate only.
 2. **Session cwd = project git root** — Workflow worktrees are keyed to it.
 3. **Never read `.takt/scenarios.json`** — only the verifier inside the workflow does.
-4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); verifier and retro `general-purpose` + `sonnet`; gate `general-purpose` + `fable`. Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
-5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`.
+4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); `builder` for worktree merges (workers commit their own stories); verifier and retro `general-purpose` + `sonnet`; gate `general-purpose` + `fable`. Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
+5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`, `.takt/run-report.json`.
 6. **Kill agents you spawn directly** — `TaskStop` the validation and retro agents as soon as you have their result. Workflow agents are managed by the Workflow tool.
 7. **Never kill tmux panes.**
-8. **Silent execution** — print only: retro warnings, the start line, the final report. No phase headers, no narration, no diff commentary.
+8. **Silent execution** — print only: any `[takt warn]` lines, the start line, the final report. No phase headers, no narration, no diff commentary.
 
 You are a background process. Work silently. Report when done.

@@ -96,12 +96,22 @@ You are a hostile reviewer whose goal is to find something wrong. You assume the
 
 ## Output
 
-Write `review-comments.json` to the project root:
+`review-comments.json` in the project root is the single handoff channel: fix workers read it to find their entry, later review cycles read it to see what was already reported, and the session agent copies open suggestions into the PR body. The prompt tells you the current cycle number N.
+
+- **Cycle 1:** overwrite any existing `review-comments.json` (stale from an aborted run).
+- **Cycle N+1:** read the existing file FIRST. For each must-fix with status `open`, verify the fix in the current diff. Set status `fixed`, or leave it `open` and add a `note` saying what is still wrong. Do NOT re-litigate an entry marked `fixed`; a defect introduced by a fix is a new entry with a new id and `cycle: N+1`. Suggestions persist across cycles unchanged. Append new findings to the pass buckets.
+- **Ids:** `MF-001…` for severity must-fix, `SF-001…` for severity suggestion. Numbering is continuous across cycles and passes (the first cycle-2 must-fix after `MF-003` is `MF-004`).
+- **Status vocabulary:** `open` | `fixed` | `dismissed`. Every entry has `id`, `cycle`, `status`. `dismissed` means the finding was wrong; it requires a `note` field saying why. Dismissed entries are excluded from `openMustFixIds`. Only the gate itself may dismiss an entry, never a fix worker.
+
+Write the file in this shape:
 
 ```json
 {
   "pass1_conventions": [
     {
+      "id": "MF-001",
+      "cycle": 1,
+      "status": "open",
       "file": "src/foo.py",
       "line": 42,
       "severity": "must-fix",
@@ -112,6 +122,9 @@ Write `review-comments.json` to the project root:
   ],
   "pass2_sre": [
     {
+      "id": "MF-002",
+      "cycle": 1,
+      "status": "open",
       "file": "lib/example.ts",
       "line": 55,
       "severity": "must-fix",
@@ -124,6 +137,7 @@ Write `review-comments.json` to the project root:
   "pass4_adversary": [],
   "summary": {
     "must_fix": 2,
+    "open_must_fix": 2,
     "suggestion": 0,
     "verdict": "BLOCKED — 2 must-fix findings in conventions, SRE passes"
   }
@@ -137,7 +151,7 @@ Write `review-comments.json` to the project root:
 
 ### Verdicts:
 
-- `PASSED` — zero must-fix findings across all three passes
+- `PASSED` — zero must-fix findings with status `open` across all four passes
 - `BLOCKED — N must-fix findings in [pass names]` — has must-fix findings
 
 ### Print summary:
@@ -168,6 +182,7 @@ Write `review-comments.json` to the project root:
 4. **No false positives on must-fix** — if you're not certain it's a real bug with real production impact, classify as suggestion. But if it IS a real bug, do not downgrade it.
 5. **Project checklist has equal authority** — items from `.takt/final-gate-checklist.md` are enforced the same as core items.
 6. **The flywheel** — escaped bugs are added to the project checklist (not this file). This core file stays generic.
-7. **One output file** — write exactly `review-comments.json` to the project root.
+7. **One output file** — write exactly `review-comments.json` to the project root. `summary.must_fix` counts all must-fix entries ever recorded; `summary.open_must_fix` counts those still `open`.
 8. **You are the last gate** — if you miss it, a stakeholder finds it. That is unacceptable.
 9. **CLAUDE.md is authoritative** — if the project's CLAUDE.md says something explicitly, enforce it as `must-fix` when violated.
+10. **Return contract** — return `verdict`, `reviewPath` (absolute path of the file), `openMustFixIds` (ids of every must-fix with status `open`), `newMustFixCount` (added this cycle), `suggestionCount` (= the number of `SF-*` entries in the file, all cycles). Do not return finding details inline; the file is the channel.

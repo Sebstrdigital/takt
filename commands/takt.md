@@ -166,7 +166,7 @@ Once the user answers all three:
      If the user chooses "Save as Feature doc": write a Feature doc to `tasks/feature-[slug].md` based on the answers (using the same format as `/feature` generates) and present summary without generating sprint.json. Exit after the Feature doc is written — do NOT generate sprint.json.
 3. **Generate sprint.json** directly at the project root using the same rules as `/sprint`:
    - Break the "what" into right-sized user stories
-   - Apply dependency ordering, type, size, complexity, verify fields
+   - Apply dependency ordering, size, complexity fields
    - Set `branchName` from a kebab-case slug of the feature description
    - Use the "why" to write story descriptions and acceptance criteria
    - Use the "what not" to exclude scope that might otherwise creep in

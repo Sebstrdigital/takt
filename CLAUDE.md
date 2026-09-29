@@ -13,14 +13,14 @@ Memory persists via:
 - **sprint.json** - tracks which stories are `passes: true/false` (ephemeral, never committed)
 - **.takt/workbooks/workbook-US-XXX.md** - per-story implementation notes (ephemeral)
 - **.takt/stats.json** - per-project timing stats for ETA estimation (persistent)
-- **.takt/retro.md** - retrospective entries and active alerts
+- **.takt/retro.md** - retrospective entries (last 3)
 
 ## Usage
 
 Say these phrases in Claude Code (they are not terminal commands):
 
 - **start takt** — run stories (reads `~/.claude/lib/takt/run.md`)
-- **takt debug** — structured bug-fixing discipline (reads `~/.claude/lib/takt/debug.md`)
+- **takt debug** — routes to the /diagnose skill (reads `~/.claude/lib/takt/debug.md`)
 - **takt retro** — generate retrospective from workbooks (reads `~/.claude/lib/takt/retro.md`)
 
 Deprecated aliases (also read `run.md`): `takt solo`, `takt team`.
@@ -39,7 +39,7 @@ The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. 
 
 **CRITICAL — Execution Rule:** On `start takt` the session agent MUST read `~/.claude/lib/takt/run.md` first and execute it itself. Never spawn the orchestrator as a sub-agent, never echo the phrase back, never ask for confirmation. Story execution happens inside the Workflow tool (`scriptPath: ~/.claude/lib/takt/takt-run.js`), which is an approved use of Workflow — no separate opt-in is needed.
 
-**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `grunt`/`builder` for the merge and commit stages. Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `general-purpose` + `fable`. Never invent other agent types.
+**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `builder` for worktree merges; workers commit their own stories. Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `general-purpose` + `fable`. Never invent other agent types.
 
 Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`.
 
@@ -49,8 +49,8 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 
 1. User says "start takt"
 2. Session agent reads `~/.claude/lib/takt/run.md`
-3. Phase 0-1: config, tool probes, feature branch, ETA from `.takt/stats.json`, retro alerts, one start line
-4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), a merge stage that commits/merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the 4-pass Fable gate with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
+3. Phase 0-1: config, tool probes, feature branch, ETA from `.takt/stats.json`, one start line
+4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), workers that commit their own story (and, in place, update `sprint.json`), plus a merge stage for parallel waves that merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the 4-pass Fable gate with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
 5. Phase 4b-7: local validation (interactive), PR, auto-retro, final report — session agent
 6. Output: start line + final report only
 
@@ -62,7 +62,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 - `lib/final-gate.md` -> `~/.claude/lib/takt/final-gate.md` - Review gate (conventions + SRE + security + adversary)
 - `lib/tooling.md` -> `~/.claude/lib/takt/tooling.md` - Optional tooling config (jCodeMunch + context-mode)
 - `lib/init.md` -> `~/.claude/lib/takt/init.md` - First-run config prompts
-- `lib/debug.md` -> `~/.claude/lib/takt/debug.md` - Debug agent prompt
+- `lib/debug.md` -> `~/.claude/lib/takt/debug.md` - retired; routes `takt debug` to /diagnose
 - `lib/retro.md` -> `~/.claude/lib/takt/retro.md` - Retro agent prompt
 - `commands/*.md` -> `~/.claude/commands/` - Slash commands
 
@@ -70,7 +70,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 - `sprint.json` — project root, stories and status (ephemeral, never committed, deleted by retro)
 - `.takt/workbooks/workbook-US-XXX.md` — ephemeral per-story notes, deleted after retro
 - `.takt/stats.json` — per-project timing stats (persistent)
-- `.takt/retro.md` — retrospective entries and alerts (persistent)
+- `.takt/retro.md` — retrospective entries (last 3) (persistent)
 - `.takt/config.json` — project toggles (persistent, committed)
 
 ### Story Fields in sprint.json
@@ -78,7 +78,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 - `dependsOn`: story IDs this story depends on; a blocked dependency blocks the story
 - `complexity`: `"simple"` (grunt/haiku) or `"complex"` (builder/sonnet)
 - `size`: `small|medium|large` for ETA stats
-- `attempts`: written by the merge stage; `1` = first worker succeeded, `2` = the `heavy` retry ran. Retro sums these into `.takt/stats.json` `retries`
+- `attempts`: written by the worker (in place) or the merge stage (worktrees); `1` = first worker succeeded, `2` = the `heavy` retry ran. Retro sums these into `.takt/stats.json` `retries`
 - `waves`: top-level; each wave with 2+ stories runs in parallel worktrees, one story per wave runs in place
 
 ## Development Workflow
@@ -109,7 +109,7 @@ Before tagging a release or merging a significant change to `main`:
 - [ ] Syntax-check `lib/takt-run.js` (above)
 - [ ] Test in a real project: say "start takt" with a valid `sprint.json`
 - [ ] Verify all phases complete: workflow returns, PR is created, retro runs
-- [ ] Check `.takt/retro.md` for any active alerts that block release
+- [ ] Check the latest `.takt/retro.md` entry's Tooling issues section
 - [ ] Update `CHANGELOG.md` with the change summary
 
 ## Markdown File Hygiene
@@ -127,7 +127,8 @@ Keep the repo lean. Every markdown file must justify its presence.
 | Worker (simple) | `grunt` | haiku | Per story, `complexity: "simple"` |
 | Worker (complex) | `builder` | sonnet | Per story |
 | Worker retry | `heavy` | opus | Once per failed story |
-| Merge / commit stage | `builder` (worktrees) / `grunt` (in place) | sonnet / haiku | Per wave, per fix cycle |
+| Story commit | worker itself | — | Per story, in the worker |
+| Merge stage (worktree waves only) | `builder` | sonnet | Per wave with 2+ stories |
 | Verifier | `general-purpose` | sonnet | Per verify cycle (max 3) |
 | Bug-fix / review-fix worker | `builder` | sonnet | Per bug / must-fix |
 | Review gate | `general-purpose` | fable | Per review cycle (max 2) |
@@ -137,5 +138,5 @@ Keep the repo lean. Every markdown file must justify its presence.
 ### Worktrees
 
 - Workflow worktrees are created under `<repo>/.claude/worktrees/` on branches `worktree-<runId>-<n>`, from the session repo's HEAD.
-- They are NOT merged back automatically. The merge stage inside `takt-run.js` commits, merges (`--no-ff`, fewest-overlap-first), removes the worktree and deletes the branch.
+- They are NOT merged back automatically. The merge stage inside `takt-run.js` (worktree waves only; workers commit their own story) merges (`--no-ff`, fewest-overlap-first), removes the worktree and deletes the branch.
 - The session must run from the project git root. Submodule repos and cross-repo work fall back to one story per wave (in-place edits).
