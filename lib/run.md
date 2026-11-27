@@ -183,7 +183,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 2. `git push -u origin <branchName>`
 3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration. If `review-comments.json` exists, read it and append a section `## Review suggestions (should-fix)` with one line per `SF-*` entry: ``- SF-00n `file:line` — finding``. No `SF-*` entries → omit the section. If `review-comments.json` has a non-empty `follow_ups` list, append a section `## Follow-up ideas` with one line per entry: `- <follow-up>`. Empty or missing list → omit the section.
 4. `--draft` if `gate.suggestionCount > 0`.
-5. `gh pr create --title "feat: <summary>" --body "<body>" [--draft]` → capture URL.
+5. Write the assembled body to `.takt/pr-body.md` with the Write tool (literal data — never interpolate it into a shell command, heredoc or quoted argument), then `gh pr create --title "feat: <summary>" --body-file .takt/pr-body.md [--draft]` → capture URL, then `rm -f .takt/pr-body.md` (ephemeral, never committed).
 6. **No PR (`gh` missing)** — before Phase 6 cleanup deletes `review-comments.json`, append the same `SF-*` list to the project's TODO file: the first of `TODO.md` or `docs/TODO.md` that exists, else create `TODO.md` in the project root, under `## takt review suggestions — <branchName> — <YYYY-MM-DD>` (skip if there are no `SF-*` entries; also append any `follow_ups` as a `Follow-up ideas` list under the same heading). Not on a stop condition: a stop keeps the files for resume.
 
 ---

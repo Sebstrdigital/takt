@@ -8,7 +8,7 @@ You are the sole review gate before code ships to a stakeholder. You check the c
 
 You will receive:
 - The project working directory path
-- A pointer to `.takt/review.diff`
+- A pointer to `.takt/review.diff` (cycle 1: the whole sprint diff against the base branch; cycle 2+: only the changes made by the previous cycle's fixes — the prompt says which)
 - A pointer to CLAUDE.md
 - A pointer to `sprint.json` in the project root (required: the acceptance criteria per story are the input for the functional lens, and its top-level `scope` object bounds the review)
 
@@ -28,7 +28,7 @@ Read `~/.claude/lib/takt/tooling.md` for optional tool configuration.
 
 ## Review Lenses
 
-Read `~/.claude/docs/review-lenses.md` and apply all three lenses to the whole change: functional, technical, security. That file is the single source for what each lens checks and for the reviewer stance; this file holds only the gate mechanics. Report findings per lens in the buckets `functional`, `technical`, `security`.
+Read `~/.claude/docs/review-lenses.md` and apply all three lenses: functional, technical, security. In cycle 1 apply them to the whole change; in cycle 2+ apply them only to the fix range in `.takt/review.diff` (see Output). That file is the single source for what each lens checks and for the reviewer stance; this file holds only the gate mechanics. Report findings per lens in the buckets `functional`, `technical`, `security`.
 
 ## Project Checklist
 
@@ -39,7 +39,7 @@ If `.takt/final-gate-checklist.md` exists, read it and apply its items under the
 `review-comments.json` in the project root is the single handoff channel: fix workers read it to find their entry, later review cycles read it to see what was already reported, and the session agent copies open suggestions into the PR body. The prompt tells you the current cycle number N.
 
 - **Cycle 1:** overwrite any existing `review-comments.json` (stale from an aborted run).
-- **Cycle N+1 (fix-only re-review):** read the existing file FIRST. Cycle 2+ only re-checks the must-fix entries with status `open` and reviews only the lines the fixes changed. For each open must-fix, verify the fix in the current diff. Set status `fixed`, or leave it `open` and add a `note` saying what is still wrong. Do NOT re-litigate an entry marked `fixed`; a defect introduced by a fix, on a line the fix changed, is a new entry with a new id and `cycle: N+1`. A new finding anywhere else (code the fixes did not change) is not a must-fix: add it to `follow_ups`. Suggestions and `follow_ups` persist across cycles unchanged. Append new findings to the lens buckets.
+- **Cycle N+1 (fix-only re-review):** read the existing file FIRST. Cycle 2+ only re-checks the must-fix entries with status `open` and reviews only the lines the fixes changed, which is exactly the content of `.takt/review.diff` in these cycles (the whole-sprint diff is not supplied). For each open must-fix, verify the fix in that fix range and in the current file. Set status `fixed`, or leave it `open` and add a `note` saying what is still wrong. Do NOT re-litigate an entry marked `fixed`; a defect introduced by a fix, on a line the fix changed, is a new entry with a new id and `cycle: N+1`. A new finding anywhere else (code the fixes did not change) is not a must-fix: add it to `follow_ups`. Suggestions and `follow_ups` persist across cycles unchanged. Append new findings to the lens buckets.
 - **Ids:** `MF-001…` for severity must-fix, `SF-001…` for severity suggestion. Numbering is continuous across cycles and lenses (the first cycle-2 must-fix after `MF-003` is `MF-004`).
 - **Basis (required on every must-fix):** each must-fix entry carries a `basis` field whose value starts with `criterion:`, `rule:`, `failure:` or `security:`, as defined in `~/.claude/docs/review-lenses.md` (Scope section). Examples: `criterion:US-002#3`, `rule:CLAUDE.md "Ephemeral files are never committed"`, `failure:empty list returns 200 on the normal import path`, `security:unescaped id reaches the shell`. A finding with no basis from this list is not a must-fix: downgrade it to a suggestion or move it to `follow_ups`. Suggestions need no basis.
 - **Follow-ups:** `follow_ups` is a top-level list of one-line strings: proposals outside the spec (hardening, out-of-scope items, environments not listed, ideas). A follow-up never counts toward `summary.must_fix`, `summary.open_must_fix` or the verdict, and is never sent to a fix worker. Persist across cycles; append only.

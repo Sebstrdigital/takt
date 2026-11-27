@@ -85,6 +85,7 @@ Every Feature doc must have a `## Scope` section with three parts: **In scope**,
 - One bullet becomes one string. Keep the wording; do not summarise or add items.
 - **A Feature doc without a Scope section, or with a part missing or empty, fails conversion.** Stop, name the doc and the missing parts, and tell the user to add them (`/feature` asks for them) or give them now. Do not write `sprint.json` until all three parts are filled. Never invent a part.
 - **Multi-doc mode:** concatenate each part across the docs in alphabetical filename order and drop exact duplicates.
+- **Reconcile conflicts before saving (multi-doc).** An **Out of scope** item from one doc that a selected doc delivers (in its In scope list or its stories) must not stay in the merged `scope.out`: the review gate sends anything in `scope.out` to follow-ups, even when a selected story requires it. Drop such an item from the merged `scope.out`. If it is unclear whether the combined sprint should deliver it, ask the user and wait; do not write `sprint.json` until it is resolved.
 
 ---
 

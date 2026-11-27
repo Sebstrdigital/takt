@@ -131,7 +131,7 @@ Keep the repo lean. Every markdown file must justify its presence.
 | Merge stage (worktree waves only) | `builder` | sonnet | Per wave with 2+ stories |
 | Verifier | `general-purpose` | sonnet | Per verify cycle (max 3) |
 | Bug-fix / review-fix worker | `builder` | sonnet | Per bug / must-fix |
-| Review gate | `skeptic` (Codex `gpt-6.2-sol` high) | Codex; fallback `general-purpose` + sonnet | Per review cycle (max 2) |
+| Review gate | `skeptic` (Codex `gpt-6.2-sol` high) | Codex; fallback `skeptic` direct mode + sonnet | Per review cycle (max 2) |
 | Local validation | `builder` | sonnet | Per run, if enabled |
 | Retro agent | `general-purpose` | sonnet | Per run |
 
