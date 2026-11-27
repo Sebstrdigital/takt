@@ -46,6 +46,7 @@
 - **US-002** `securityDeclined` fallback in takt-run.js.
 - **US-003** `lib/devops-checks.sh` + install.
 - **US-004** run.md Phase 0 runs the preflight and stops on failure.
+- **US-005** README.md brought up to date with all of the above (wave 3).
 
 ## Out of scope
 
