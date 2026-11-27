@@ -2,6 +2,7 @@
 
 All notable improvements to takt are documented here. Managed by the retro agent.
 
+- 2026-11-27: Final gate scoped to the sprint: scope lines in Feature docs and sprint.json, must-fix findings carry a basis, out-of-scope ideas become follow-ups, cycle 2+ re-reviews only the fix range; verifier files bugs only for failing scenarios; takt-run.js adds verifyOnly and downgrades a PASSED verdict with open must-fix items to BLOCKED
 - 2026-11-27: Final gate reviews with three shared lenses (functional/technical/security) with a declined security lens triggering a direct re-review; new lib/devops-checks.sh preflight run at Phase 0; takt-run.js accepts an empty stories list to re-run verify and gate
 - 2026-09-29: Retire debug mode (lib/debug.md now routes to /diagnose + /debug); fix doc drift (final-gate.md "three" → "four" passes, removed stale story fields type/verify from takt.md and README, worker.md .takt read ban narrowed to scenarios.json so tooling.md's session.json read is legal)
 - 2026-09-29: Workers commit their own story (in place: add/commit/jq; worktree: commit on branch); the per-story grunt merge agent is gone, a builder merge agent runs only for waves with 2+ stories. Verifier gains "Confirm before you assert" (every claim backed by a quoted read); tooling.md allows jCodeMunch only when indexed_commit == HEAD
