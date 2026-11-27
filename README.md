@@ -65,16 +65,18 @@ graph TD
     style EX fill:#1a3a2e,stroke:#10b981,color:#6ee7b7
 ```
 
-1. **Plan** — Say `/takt` to start. For large initiatives, `/epic` defines the Epic and loops through all Features automatically (Why > What > What Not per Feature). For small changes, the Quick path runs a 3-question interview and goes straight to sprint.json.
+1. **Plan** — Say `/takt` to start. takt also installs an "ask before bulk work" rule into `~/.claude/CLAUDE.md`: before non-trivial work (3+ separable stories, more than a handful of files) Claude asks "Run this through takt?", and on yes the work becomes `/feature` -> `/sprint` -> `start takt`. Quick slices (a fix, a small edit) proceed without asking. For large initiatives, `/epic` defines the Epic and loops through all Features automatically (Why > What > What Not per Feature). For small changes, the Quick path runs a 3-question interview and goes straight to sprint.json.
 2. **Scope** — Say `/sprint` to convert Feature docs to sprint.json + `.takt/scenarios.json` (hidden BDD scenarios visible only to the verifier). `/sprint` can merge multiple Feature docs into one sprint with wave computation.
 3. **Execute** — Say "start takt". The session agent reads `run.md`, prints a start line with an ETA (based on per-project timing stats), then hands stories, verification and the review gate to the `takt-run` Workflow script. Each wave runs fresh workers in parallel git worktrees; workers commit their own story; a merge agent runs only for parallel (worktree) waves, merging (fewest shared files first), removing the worktrees and updating `sprint.json`. No intermediate output until the final report. An interrupted run resumes from the workflow run id.
 4. **Verify** — After all stories pass, an independent verifier checks the implementation against hidden scenarios. Failed scenarios become behavioral bug tickets in `bugs.json`. Fresh workers read their ticket from that file and fix it without seeing scenarios; the next cycle re-reads the file and marks tickets `fixed`. Up to 3 verify-fix cycles.
-5. **Review Gate** — A unified review gate (Codex gpt-6.2-sol via the `skeptic` relay) reads the feature branch diff and reviews it through the three shared lenses from `~/.claude/docs/review-lenses.md`: functional (acceptance criteria from `sprint.json`), technical (project standards, runtime and operations) and security. Findings are written to `review-comments.json` with ids (`MF-` must-fix, `SF-` suggestion). Fix workers read their must-fix entry from the file, and the next cycle re-reads it and marks entries `fixed`. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
+5. **Review Gate** — One final review of the whole branch, run on Codex (gpt-6.2-sol, high reasoning) through the `skeptic` relay. It reads the feature branch diff and applies the three lenses from `~/.claude/docs/review-lenses.md`: functional (acceptance criteria from `sprint.json`), technical (project standards, runtime and operations) and security. Findings are written to `review-comments.json` with ids (`MF-` must-fix, `SF-` suggestion). Fix workers read their must-fix entry from the file, and the next cycle re-reads it and marks entries `fixed`. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
+   - **Check-ins.** The relay runs Codex through `~/.claude/lib/codex-review.sh`, which has no hard timeout: it checks in every 5 minutes and reports `RUNNING` while Codex is producing output. After 10 idle minutes it reports `HUNG` and the run is treated as Codex unavailable.
+   - **Fallbacks.** If Codex is unavailable (missing, `HUNG`, failed) or declines the security lens (`security: declined`), the gate runs one direct re-review on sonnet instead.
 6. **Ship** — PR is created automatically (open suggestions are listed in the PR body, or appended to the project's TODO file (`TODO.md` or `docs/TODO.md`) when `gh` is missing), retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
 
 ## Preflight
 
-Every `start takt` begins with `lib/devops-checks.sh`, a plain-bash preflight with no LLM calls. It requires Munin (reachable), the validation VM (`ssh validation` with podman), the Codex CLI, `gh` authentication and push access to the project's `origin`. If any check fails, takt stops before starting the Workflow and prints the failing lines with fix hints; the results are merged into `.takt/session.json` so later phases can rely on them.
+Every `start takt` begins with `lib/devops-checks.sh` (installed as `~/.claude/lib/takt/devops-checks.sh`), a plain-bash preflight with no LLM calls. Five checks are required: Munin reachable, the validation VM (`ssh validation` with podman), the Codex CLI, `gh` authentication, and push access to the project's `origin`. If any check fails, takt stops in Phase 0, before touching `sprint.json` or starting the Workflow, and prints each failing line with a fix hint. Fix it and say `start takt` again. The results are merged into `.takt/session.json` so later phases can rely on them.
 
 ## Information Isolation
 
@@ -170,9 +172,14 @@ start takt
 
 **Key design properties:**
 - **Workers commit their own story** — they edit files, run the project's checks, write a workbook, commit with an allow-listed set of git commands (never push, merge, checkout, rebase, stash) and return a structured result. A merge agent (`builder`) runs only for parallel (worktree) waves to merge and clean up.
-- **Shared agent roster** — workers are the same named agents the `/orchestrator` skill uses (`~/.claude/agents/`): `grunt` (haiku) for simple stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry; the review gate runs on Codex through `skeptic`, verifier and retro on `sonnet`.
+- **Shared agent roster** — workers are the same named agents the `/orchestrator` skill uses (`~/.claude/agents/`): 
+  - `grunt` (haiku): stories with `complexity: "simple"`.
+  - `builder` (sonnet): stories with `complexity: "complex"`.
+  - `heavy` (opus): the single retry of a failed story.
+  - Concurrency caps per tier (`TIER_CAPS` in `lib/takt-run.js`): `grunt` 3, `builder` 7, `heavy` 2.
+  - The review gate runs on Codex through `skeptic`; verifier and retro run on `general-purpose` + `sonnet`.
 - **Lean prompts** — worker prompts are under 1KB: story JSON + paths + "Read ~/.claude/lib/takt/worker.md". Structured returns are enforced by JSON schema, not prose.
-- **Unified review gate** — the `skeptic` relay (Codex gpt-6.2-sol, Sonnet fallback) writes `git diff main...HEAD > .takt/review.diff` and applies three lenses (functional, technical, security). Re-run between review-fix cycles.
+- **Unified review gate** — the `skeptic` relay (Codex gpt-6.2-sol high, one direct sonnet re-review as fallback) reviews `.takt/review.diff` (the diff of the feature branch against its base) through three lenses (functional, technical, security). Re-run between review-fix cycles.
 - **Cycle-aware findings** — `bugs.json` and `review-comments.json` keep every entry with `cycle` and `status` (`open`/`fixed`/`dismissed`). The next cycle reads the file first, confirms open items, never re-litigates fixed ones. Fix workers are pointed at their entry and never edit the file. Should-fix suggestions (`SF-*`) go into the PR body, or into the project TODO file when `gh` is missing.
 - **Per-stage timing** — verifier, gate, merge and commit agents report start/finish; the Workflow returns `timing`; the session writes `.takt/run-report.json`; the retro splits overhead into verify, gate, fixes and merge and keeps running averages in `.takt/stats.json`.
 - **External worker support** — story workers can be dispatched via an external CLI (e.g. OpenCode) from `.takt/config.json`. Verifier, review gate, and retro always use Claude.
@@ -238,7 +245,8 @@ cd takt && git pull && ./install.sh
 |   |-- run.md                # Orchestrator prompt (session-level)
 |   |-- takt-run.js           # Workflow script: story waves, worktree merge, verify loop, review gate, timing
 |   |-- verifier.md           # Scenario verification + bug ticket agent
-|   |-- final-gate.md         # Review gate (conventions + SRE + security + adversary)
+|   |-- final-gate.md         # Review gate mechanics (lenses come from ~/.claude/docs/review-lenses.md)
+|   |-- devops-checks.sh      # Phase 0 preflight (Munin, validation VM, Codex, gh auth, gh push)
 |   |-- worker.md             # Worker agent prompt (implements, validates, commits its story)
 |   |-- tooling.md            # Shared optional tooling config (jCodeMunch + context-mode)
 |   |-- init.md               # First-run config prompts (Phase 0)
@@ -249,7 +257,7 @@ cd takt && git pull && ./install.sh
 |   |-- epic.md               # /epic -- define a high-level Epic
 |   |-- feature.md            # /feature -- generate Feature doc
 |   +-- sprint.md             # /sprint -- convert Feature doc to sprint.json (offers TODO.md follow-ups)
-+-- CLAUDE.md                 # takt section appended
++-- CLAUDE.md                 # takt section appended (incl. the ask-before-bulk-work rule)
 ```
 
 ### Permission Setup
@@ -288,7 +296,8 @@ Requires a session restart to take effect.
 ## Prerequisites
 
 - [Claude Code CLI](https://claude.com/claude-code) installed and authenticated, with the Workflow tool available
-- The shared agent roster from [claude-tools](https://github.com/Sebstrdigital/claude-tools) installed in `~/.claude/agents/` (`grunt`, `builder`, `heavy`)
+- The shared agent roster from [claude-tools](https://github.com/Sebstrdigital/claude-tools) installed in `~/.claude/agents/` (`grunt`, `builder`, `heavy`, `skeptic`)
+- The review gate's shared pieces in `~/.claude/`: `docs/review-lenses.md` (the three lenses) and `lib/codex-review.sh` (the Codex runner used by `skeptic`)
 - A git repository for your project; start the Claude Code session from its root (worktrees are keyed to the session repo)
 
 ## References
