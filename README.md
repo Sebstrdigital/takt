@@ -72,6 +72,10 @@ graph TD
 5. **Review Gate** — A unified review gate (Codex gpt-6.2-sol via the `skeptic` relay) reads the feature branch diff and reviews it through the three shared lenses from `~/.claude/docs/review-lenses.md`: functional (acceptance criteria from `sprint.json`), technical (project standards, runtime and operations) and security. Findings are written to `review-comments.json` with ids (`MF-` must-fix, `SF-` suggestion). Fix workers read their must-fix entry from the file, and the next cycle re-reads it and marks entries `fixed`. Up to 2 review-fix cycles. Optionally followed by local validation (runtime checks defined per-project in `.takt/local-validation.md`).
 6. **Ship** — PR is created automatically (open suggestions are listed in the PR body, or appended to the project's TODO file (`TODO.md` or `docs/TODO.md`) when `gh` is missing), retro agent processes workbooks, computes timing stats (`.takt/stats.json`), and updates `.takt/retro.md` and `CHANGELOG.md`.
 
+## Preflight
+
+Every `start takt` begins with `lib/devops-checks.sh`, a plain-bash preflight with no LLM calls. It requires Munin (reachable), the validation VM (`ssh validation` with podman), the Codex CLI, `gh` authentication and push access to the project's `origin`. If any check fails, takt stops before starting the Workflow and prints the failing lines with fix hints; the results are merged into `.takt/session.json` so later phases can rely on them.
+
 ## Information Isolation
 
 takt enforces strict information boundaries between agents. This is the key architectural property that prevents workers from gaming verification.

@@ -13,6 +13,21 @@ All state lives in two places:
 - **`.takt/config.json`** — persistent project toggles (committed)
 - **`.takt/session.json`** — per-run cache, rewritten every Phase 0
 
+### 0.0 Preflight (hard prerequisites, runs first)
+
+Before anything else, from the project root, run:
+
+```bash
+~/.claude/lib/takt/devops-checks.sh --json
+```
+
+It prints one JSON object `{"munin": bool, "validation_vm": bool, "codex": bool, "gh_auth": bool, "gh_push": bool}` and exits 1 if any check failed. Hold the object for 0.4.
+
+- **Any check `false` → STOP.** Run `~/.claude/lib/takt/devops-checks.sh` (no flag) once more, print every `FAIL <name>: <fix hint>` line verbatim, and tell the user to fix them and say "start takt" again. Do not continue Phase 0, do not touch `sprint.json`, do not start the Workflow.
+- All `true` → continue silently.
+
+Munin, the validation VM, Codex and GitHub push access are hard prerequisites. The `munin` and `validation_vm` flags are the availability source for the rest of the run: later phases (a Munin recall step, 4b local validation on `validation.local`) rely on `session.json` `munin.available` / `validation_vm.available` and do not re-probe.
+
 ### 0.1 Ensure `.takt/config.json` exists
 
 1. `mkdir -p .takt .takt/workbooks`
@@ -39,7 +54,7 @@ If `~/.claude/lib/takt/run-local.md` exists, read and apply it (user-owned exten
 
 ### 0.4 Write `.takt/session.json`
 
-Merge `.takt/config.json` with the probe results:
+Merge `.takt/config.json` with the 0.0 preflight results and the 0.2 probe results. `munin.available` and `validation_vm.available` come from the preflight (`devops.munin`, `devops.validation_vm`), not from a separate probe:
 
 ```json
 {
@@ -48,7 +63,10 @@ Merge `.takt/config.json` with the probe results:
   "worker_runner": "anthropic",
   "worker_runner_external_cmd": "",
   "jcodemunch": { "available": true, "indexed": true, "indexed_commit": "<sha>" },
-  "context_mode": { "available": true }
+  "context_mode": { "available": true },
+  "munin": { "available": true },
+  "validation_vm": { "available": true },
+  "devops": { "munin": true, "validation_vm": true, "codex": true, "gh_auth": true, "gh_push": true }
 }
 ```
 
