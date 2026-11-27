@@ -214,7 +214,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 1. **Never write application code** — you orchestrate only.
 2. **Session cwd = project git root** — Workflow worktrees are keyed to it.
 3. **Never read `.takt/scenarios.json`** — only the verifier inside the workflow does.
-4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); `builder` for worktree merges (workers commit their own stories); verifier and retro `general-purpose` + `sonnet`; gate `general-purpose` + `fable`. Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
+4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); `builder` for worktree merges (workers commit their own stories); verifier and retro `general-purpose` + `sonnet`; gate `skeptic` (Codex relay, Sonnet fallback). Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
 5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`, `.takt/run-report.json`.
 6. **Kill agents you spawn directly** — `TaskStop` the validation and retro agents as soon as you have their result. Workflow agents are managed by the Workflow tool.
 7. **Never kill tmux panes.**

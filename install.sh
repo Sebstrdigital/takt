@@ -147,7 +147,7 @@ generate_takt_section() {
 **Ask before bulk work (HARD RULE).** Before implementing anything that is not a quick small slice (rough line: 3+ separable stories, more than a handful of files, or work that would fan out to several subagents), STOP and ask: "Run this through takt?" If yes → turn what we agreed into takt artifacts (`/feature` → `/sprint` → `sprint.json`) and wait for `start takt`. If no → do it in-session with the named roster (see the orchestrator skill). Quick slices (a fix, a small edit, a few-file change) proceed without asking.
 Before entering plan mode, ask: takt Feature or native plan?
 
-**Execution:** `start takt` → the session agent reads `~/.claude/lib/takt/run.md` and runs it itself (never as a sub-agent). Stories, verification and the review gate run inside the `takt-run` Workflow script; workers come from the shared agent roster in `~/.claude/agents/` (`grunt` simple / `builder` complex / `heavy` retry). Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `fable`.
+**Execution:** `start takt` → the session agent reads `~/.claude/lib/takt/run.md` and runs it itself (never as a sub-agent). Stories, verification and the review gate run inside the `takt-run` Workflow script; workers come from the shared agent roster in `~/.claude/agents/` (`grunt` simple / `builder` complex / `heavy` retry). Verifier and retro use `general-purpose` + `sonnet`; the review gate runs on Codex (`gpt-6.2-sol` high) through the `skeptic` relay, falling back to a direct Sonnet review.
 <!-- takt:end -->
 SECTION
 }
