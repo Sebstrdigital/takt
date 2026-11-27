@@ -107,6 +107,7 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
 {
   "project": "[Project Name]",
   "branchName": "takt/[feature-name-kebab-case]",
+  "featureDocs": ["tasks/feature-[feature-name-kebab-case].md"],
   "description": "[Feature description from Feature doc title/intro]",
   "scope": {
     "in": ["[In scope bullet from the Feature doc]"],
@@ -327,7 +328,8 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 2. **IDs**: Sequential (US-001, US-002, etc.)
 3. **Priority**: Based on dependency order, then document order
 4. **All stories**: `passes: false`
-5. **branchName**: Derive from Feature doc filename, kebab-case, prefixed with `takt/` (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, derive from the sprint/epic name or prompt the user for a branch name (e.g. `takt/sprint-1` or `takt/<feature-group-name>`).
+5. **branchName**: a default suggestion only. Derive from Feature doc filename, kebab-case, prefixed with `takt/` (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, derive from the sprint/epic name (e.g. `takt/sprint-1` or `takt/<feature-group-name>`). `start takt` Phase 1 checks the current branch and the repo's branch-naming standard, asks the user for the final name and PR base, and writes them back (`branchName`, `baseBranch`, `baseRef`). Do not write `baseBranch` or `baseRef` here.
+5b. **featureDocs**: the project-relative paths of every Feature doc this sprint was built from (one entry in single-doc mode). The retro archives exactly these files, so the branch name is free to change.
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 7. **Size assignment**: Assign `"small"`, `"medium"`, or `"large"` based on scope (see Story Size Assignment section)
 8. **Complexity assignment**: Assign `"simple"` or `"complex"` based on auto-classification rules (see Story Complexity section). Default to `"complex"` when uncertain.
@@ -391,6 +393,7 @@ Add ability to mark tasks with different statuses.
 {
   "project": "TaskApp",
   "branchName": "takt/task-status",
+  "featureDocs": ["tasks/feature-task-status.md"],
   "description": "Task Status Feature - Track task progress with status indicators",
   "scope": {
     "in": ["Task status field, toggle, badge and list filter"],
@@ -484,16 +487,16 @@ Note:
 
 ## Feature Doc File Naming Convention
 
-The Feature doc filename and branchName must match so takt can archive the correct file on completion:
+The default branchName is derived from the Feature doc filename, and `featureDocs` records the doc itself:
 
 - Feature doc file: `tasks/feature-dark-mode.md`
-- branchName: `takt/dark-mode`
+- branchName (default suggestion): `takt/dark-mode`
+- featureDocs: `["tasks/feature-dark-mode.md"]`
 
-**On completion**, takt derives the Feature doc filename from branchName and moves it to archive:
-- `takt/dark-mode` → looks for `tasks/feature-dark-mode.md`
-- Moves to: `tasks/archive/YYYY-MM-DD-dark-mode/feature-dark-mode.md`
+**On completion**, takt archives every file in `featureDocs`, whatever branch name the user picked at start:
+- `tasks/feature-dark-mode.md` → `tasks/archive/YYYY-MM-DD-dark-mode/feature-dark-mode.md`
 
-**In multi-doc mode**, the branchName is not derived from a single Feature doc filename. All merged Feature docs are archived on completion — takt archives each doc individually using its own name.
+**In multi-doc mode**, `featureDocs` lists every merged Feature doc; each is archived individually under its own name.
 
 ---
 
@@ -588,7 +591,8 @@ Before writing sprint.json, verify:
 
 - [ ] **Every Feature doc has a Scope section with In scope, Out of scope and Environment, each non-empty — a Feature doc without one fails the checklist; do not write sprint.json**
 - [ ] **scope** copied into sprint.json as `{ "in": [..], "out": [..], "environment": [..] }` (string arrays; in multi-doc mode merged across docs)
-- [ ] **branchName matches Feature doc filename** (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, branchName is confirmed with the user.
+- [ ] **branchName** default suggestion derived from the Feature doc filename (e.g., `feature-dark-mode.md` → `takt/dark-mode`); the final name is chosen at `start takt`
+- [ ] **featureDocs** lists the path of every Feature doc this sprint was built from
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
@@ -647,12 +651,12 @@ AskUserQuestion:
   header: "takt"
   options:
     - label: "Yes, start now"
-      description: "Create feature branch and run all stories autonomously"
+      description: "Pick the branch, then run all stories autonomously"
     - label: "No, I'll review first"
       description: "Stop here — you can say 'start takt' later after reviewing sprint.json"
 ```
 
-**When the user selects "Yes, start now":** The session agent MUST immediately read `~/.claude/lib/takt/run.md` and begin Phase 1 execution directly. Do NOT echo "start takt", do NOT spawn a sub-agent, do NOT ask again. Just read the prompt file and execute.
+**When the user selects "Yes, start now":** The session agent MUST immediately read `~/.claude/lib/takt/run.md` and begin Phase 1 execution directly. Do NOT echo "start takt", do NOT spawn a sub-agent, do NOT ask again whether to start. Just read the prompt file and execute; Phase 1 still asks the branch question (name and PR base), the same as `start takt`.
 
 **When the user selects "No, I'll review first":** Stop. The user can type "start takt" later when ready.
 

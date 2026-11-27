@@ -84,10 +84,23 @@ Merge `.takt/config.json` with the 0.0 preflight results and the 0.2 probe resul
    [takt warn] Submodule repo detected — running stories sequentially (worktree isolation doesn't cover submodules)
    ```
    and pass `waves` as one story per wave (see Phase 2).
-4. Create or switch to the feature branch:
-   ```bash
-   git show-ref --verify --quiet "refs/heads/<branchName>" && git checkout <branchName> || git checkout -b <branchName>
-   ```
+4. **Choose the branch** — never create a branch without asking. The branch often becomes a customer-facing PR branch, so the user picks the name.
+   - **Safe names only.** Every branch name used below (current, chosen, PR base) must match `^[A-Za-z0-9._/-]+$` and pass `git check-ref-format --branch`. A name that fails → STOP and tell the user; never put it in a shell command. Quote every name in commands (`git checkout -b "<name>"`).
+   - **Resume (no questions):** the sprint already started when `sprint.json` has `baseBranch`, or (older sprint.json) any story has `passes: true` or a non-empty `startTime`. Started → first validate the saved `branchName` (and `baseBranch` if present) with the safe-name rule, before any git command uses them; then, if local branch `branchName` exists, `git checkout "<branchName>"`. If `baseBranch` is missing, take the base of `branchName`'s open PR (`gh pr list --head "<branchName>" --state open --json baseRefName --limit 1`); none → ask the PR base question once (the base is unknown, never guess). Then recompute `baseRef` (Review ref below — never reuse a saved one), write back and skip the questions. A sprint that has not started always goes through the questions, even when a branch of the suggested name already exists.
+   - **Legacy provenance:** if `sprint.json` has no `featureDocs`, before any rename set `featureDocs` to `["tasks/feature-<name>.md"]` derived from the current `branchName` (`takt/<name>`) when that file exists, else `[]`.
+   - **Where you are:** `C=$(git branch --show-current)`. Empty (detached HEAD) → STOP and ask the user to check out a branch. Default branch `D`: `git symbolic-ref --short refs/remotes/origin/HEAD` without `origin/`; if that fails, whichever of `main`/`master` exists. Dev branches: `develop`, `dev`, `development`, `staging`, `release/*`.
+   - **Naming standard,** strongest source first: (1) an explicit branch-naming rule in `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `AGENTS.md`, `.github/pull_request_template.md` or `docs/`; (2) the pattern most distinct existing branches follow: list `git for-each-ref --format='%(refname)' refs/heads refs/remotes/origin`, strip `refs/heads/` and `refs/remotes/origin/`, drop `HEAD`, deduplicate (local `x` and `origin/x` count once), ignore `D`, dev branches and `takt/*`, then count prefixes, e.g. `feature/<name>`, `feat/<name>`, `<TICKET>-<name>`; (3) none found. Build the repo-standard suggestion from the feature name (the part of `sprint.json.branchName` after `takt/`). If the standard needs a ticket id you do not have, leave a `<TICKET>` placeholder in the description and let the user type the real name.
+   - **On a feature branch** (`C` is not `D` and not a dev branch) — `AskUserQuestion`, header "Branch":
+     - "Run on `<C>` (Recommended)": work on the current branch.
+     - "New branch from `<C>`": go to the name question below, branching from `C`.
+   - **On `D` or a dev branch, or "New branch" picked** — `AskUserQuestion`, header "Branch", question "Branch name for this takt run?":
+     - the repo-standard suggestion, marked "(Recommended)" (omit when no standard was found);
+     - `takt/<feature>` (marked "(Recommended)" when no standard was found);
+     - the user's own name arrives through "Other".
+     Validate the name (safe-name rule above). If invalid, say so and ask again. If a branch of that name already exists locally or on `origin`, ask whether to use the existing branch (then check it out, set `C` to that branch, and continue as "Run on `<C>`") or pick another name. Otherwise `git checkout -b "<name>"` from the current branch.
+   - **PR base (`baseBranch`):** a new branch → the branch it was created from. Running on `C` → the base of `C`'s **open** PR: `gh pr list --head "<C>" --state open --json baseRefName --limit 1`; if none, ask once (`AskUserQuestion`, header "PR base", options `D` and each existing dev branch).
+   - **Review ref (`baseRef`):** the gate diffs against a git revision. `git rev-parse --verify --quiet "refs/heads/<baseBranch>"` succeeds → `baseRef` = `<baseBranch>`; else `git fetch origin "<baseBranch>"` and, if `refs/remotes/origin/<baseBranch>` resolves, `baseRef` = `origin/<baseBranch>`; neither → STOP and tell the user. Then replace `baseRef` with its commit id (`git rev-parse --verify "<baseRef>^{commit}"`, must be 40 hex chars) so the workflow only ever gets a hex id.
+   - Write `branchName`, `baseBranch` and `baseRef` back into `sprint.json` (`jq`, keep everything else). Every later phase uses these values.
 5. **Detect mode** from `waves`: sequential if empty/missing or every wave has 1 story; parallel if any wave has 2+.
 6. **Estimate duration** from `.takt/stats.json` (`stories.bySize.<size>.avg` per story + `overhead.avg`; defaults small=120s, medium=180s, large=300s, overhead=480s). Print as `estimate × 0.8` to `estimate × 1.3`, rounded to 5 min.
 7. Print the start line and nothing else:
@@ -107,7 +120,7 @@ Build `args`:
 |-----|-------|
 | `projectDir` | absolute project git root |
 | `branch` | `sprint.json.branchName` |
-| `baseBranch` | `"main"` unless the project's default branch differs |
+| `baseBranch` | `sprint.json.baseRef` (resolvable git ref from Phase 1 step 4; the short `baseBranch` name is only for `gh`) |
 | `taktLib` | absolute path of `~/.claude/lib/takt` (expand `~`) |
 | `stories` | `jq '[.userStories[] | select(.passes == false)]' sprint.json` (full story objects) |
 | `verifyOnly` | omit normally. For a verify-only rerun (every story already `passes: true`) pass `stories: []` plus `verifyOnly: true` — the script skips Phase 2 and goes straight to verification and the gate. `stories: []` without `verifyOnly: true` makes the script throw |
@@ -183,7 +196,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 2. `git push -u origin <branchName>`
 3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration. If `review-comments.json` exists, read it and append a section `## Review suggestions (should-fix)` with one line per `SF-*` entry: ``- SF-00n `file:line` — finding``. No `SF-*` entries → omit the section. If `review-comments.json` has a non-empty `follow_ups` list, append a section `## Follow-up ideas` with one line per entry: `- <follow-up>`. Empty or missing list → omit the section.
 4. `--draft` if `gate.suggestionCount > 0`.
-5. Write the assembled body to `.takt/pr-body.md` with the Write tool (literal data — never interpolate it into a shell command, heredoc or quoted argument), then `gh pr create --title "feat: <summary>" --body-file .takt/pr-body.md [--draft]` → capture URL, then `rm -f .takt/pr-body.md` (ephemeral, never committed).
+5. Write the assembled body to `.takt/pr-body.md` with the Write tool (literal data — never interpolate it into a shell command, heredoc or quoted argument), check for an open PR on this branch: `gh pr list --head "<branchName>" --state open --json url --limit 1`. One exists → do not create or comment; use its URL. None → `gh pr create --base "<baseBranch>" --head "<branchName>" --title "feat: <summary>" --body-file .takt/pr-body.md [--draft]` → capture URL. Then `rm -f .takt/pr-body.md` (ephemeral, never committed).
 6. **No PR (`gh` missing)** — before Phase 6 cleanup deletes `review-comments.json`, append the same `SF-*` list to the project's TODO file: the first of `TODO.md` or `docs/TODO.md` that exists, else create `TODO.md` in the project root, under `## takt review suggestions — <branchName> — <YYYY-MM-DD>` (skip if there are no `SF-*` entries; also append any `follow_ups` as a `Follow-up ideas` list under the same heading). Not on a stop condition: a stop keeps the files for resume.
 
 ---

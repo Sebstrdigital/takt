@@ -147,7 +147,7 @@ Update overhead the same way (single running average). Update each `phases` entr
 ### 9. Cleanup
 After the retro entry and stats update have been completed:
 - Delete all `workbook-*.md` files from `.takt/workbooks/`
-- Archive the Feature doc: derive filename from `sprint.json` branchName (`takt/feature-name` → `tasks/feature-feature-name.md`), move to `tasks/archive/YYYY-MM-DD-feature-name/`
+- Archive the Feature docs: for each path in `sprint.json.featureDocs`: it must be a relative `.md` path with no `..` segment, the file must exist, and its resolved real path (`realpath`) must be inside the project root — otherwise skip it and report it. Move it to `tasks/archive/YYYY-MM-DD-<name>/` (`<name>` = filename without `feature-` and `.md`); for the destination, resolve the nearest existing parent with `realpath`, check it is inside the project root, then `mkdir -p` the archive dir and check its `realpath` again before moving. Older sprint.json files without `featureDocs`: derive the filename from branchName (`takt/feature-name` → `tasks/feature-feature-name.md`) and apply the same source and destination checks; if that file does not exist or a check fails, skip archiving and say so in the retro entry.
 - Delete run artifacts: `sprint.json`, `.takt/sprint-snapshot.json`, `.takt/scenarios.json`, `.takt/review.diff`, `.takt/validation-report.md`, `.takt/run-report.json`, `bugs.json`, `review-comments.json`
 - Do NOT delete `.takt/stats.json` — it persists across runs
 - Only delete after confirming the retro entry was written successfully

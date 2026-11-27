@@ -49,7 +49,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 
 1. User says "start takt"
 2. Session agent reads `~/.claude/lib/takt/run.md`
-3. Phase 0-1: config, tool probes, feature branch, ETA from `.takt/stats.json`, one start line
+3. Phase 0-1: config, tool probes, branch choice (repo naming standard, user picks name and PR base), ETA from `.takt/stats.json`, one start line
 4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), workers that commit their own story (and, in place, update `sprint.json`), plus a merge stage for parallel waves that merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the unified 3-lens Codex gate (skeptic relay, Sonnet fallback) with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
 5. Phase 4b-7: local validation (interactive), PR, auto-retro, final report — session agent
 6. Output: start line + final report only

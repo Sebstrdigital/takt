@@ -167,7 +167,8 @@ Once the user answers all three:
 3. **Generate sprint.json** directly at the project root using the same rules as `/sprint`:
    - Break the "what" into right-sized user stories
    - Apply dependency ordering, size, complexity fields
-   - Set `branchName` from a kebab-case slug of the feature description
+   - Set `branchName` from a kebab-case slug of the feature description (a default suggestion; `start takt` asks for the final name)
+   - Set `featureDocs` to `[]` (the quick path writes no Feature doc)
    - Use the "why" to write story descriptions and acceptance criteria
    - Use the "what not" to exclude scope that might otherwise creep in
 4. **Generate `.takt/scenarios.json`** alongside sprint.json — ALWAYS required, never skipped (same rules as `/sprint`).
