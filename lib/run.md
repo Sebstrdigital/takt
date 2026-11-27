@@ -23,7 +23,7 @@ Before anything else, from the project root, run:
 
 It prints one JSON object `{"munin": bool, "validation_vm": bool, "codex": bool, "gh_auth": bool, "gh_push": bool}` and exits 1 if any check failed. Hold the object for 0.4.
 
-- **Any check `false` → STOP.** Run `~/.claude/lib/takt/devops-checks.sh` (no flag) once more, print every `FAIL <name>: <fix hint>` line verbatim, and tell the user to fix them and say "start takt" again. Do not continue Phase 0, do not touch `sprint.json`, do not start the Workflow.
+- **Any check `false` → STOP.** Name every check that was `false` in the object. Run `~/.claude/lib/takt/devops-checks.sh` (no flag) once more and print every `FAIL <name>: <fix hint>` line verbatim. If a check that was `false` has no `FAIL` line in the rerun (it recovered between runs), still name it and say it failed on the first run and may be transient. Then tell the user to fix them and say "start takt" again. Do not continue Phase 0, do not touch `sprint.json`, do not start the Workflow.
 - All `true` → continue silently.
 
 Munin, the validation VM, Codex and GitHub push access are hard prerequisites. The `munin` and `validation_vm` flags are the availability source for the rest of the run: later phases (a Munin recall step, 4b local validation on `validation.local`) rely on `session.json` `munin.available` / `validation_vm.available` and do not re-probe.
@@ -51,6 +51,8 @@ Munin, the validation VM, Codex and GitHub push access are hard prerequisites. T
 ### 0.3b Local overrides
 
 If `~/.claude/lib/takt/run-local.md` exists, read and apply it (user-owned extensions, survives install.sh). Otherwise skip silently.
+
+The 0.0 preflight is authoritative for Munin and the validation VM. Ignore any `run-local.md` section that probes Munin or the validation VM (for example "Additional Tool Probe: munin" or "Additional Tool Probe: HomeLab validation VM") or writes `munin.available` / `validation_vm.available`: do not repeat those probes and do not overwrite the preflight-derived flags. Apply the remaining sections (for example the Phase 4b override), which use `validation_vm.available` as set by 0.4.
 
 ### 0.4 Write `.takt/session.json`
 

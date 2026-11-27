@@ -32,25 +32,31 @@ for arg in "$@"; do
     esac
 done
 
-# run_timeout <seconds> <cmd...> - bounded run; macOS has no timeout(1) by default.
+# run_timeout <seconds> <cmd...> - bounded run; returns 124 when the deadline fired.
+# The deadline is hard: TERM, then KILL one second later, to the command's whole process group, so a
+# TERM-ignoring command or a child holding stdout open cannot outlive it (or stall a $(...) capture).
+# Not timeout(1)/gtimeout: they cannot reap a straggler that outlives the command, and macOS has neither by default.
 run_timeout() {
     local secs="$1"
     shift
-    if command -v timeout >/dev/null 2>&1; then
-        timeout "$secs" "$@"
-    elif command -v gtimeout >/dev/null 2>&1; then
-        gtimeout "$secs" "$@"
-    else
-        "$@" &
-        local pid=$!
-        ( sleep "$secs"; kill "$pid" 2>/dev/null ) &
-        local watchdog=$!
+    (
+        set -m   # job control: each background job leads its own process group
+        local mark rc pid watchdog
+        mark="$(mktemp "${TMPDIR:-/tmp}/run-timeout.XXXXXX")" || exit 1
+        "$@" </dev/null &
+        pid=$!
+        # Watchdog stdio is detached so its sleep cannot hold the caller's stdout open.
+        ( sleep "$secs"; echo fired > "$mark"; kill -TERM -- "-$pid" 2>/dev/null
+          sleep 1; kill -KILL -- "-$pid" 2>/dev/null ) >/dev/null 2>&1 &
+        watchdog=$!
         wait "$pid" 2>/dev/null
-        local rc=$?
-        kill "$watchdog" 2>/dev/null
-        wait "$watchdog" 2>/dev/null
-        return "$rc"
-    fi
+        rc=$?
+        kill -KILL -- "-$watchdog" 2>/dev/null   # stop the watchdog and its sleep
+        kill -KILL -- "-$pid" 2>/dev/null        # reap stragglers still holding stdout
+        [ -s "$mark" ] && rc=124
+        rm -f "$mark"
+        exit "$rc"
+    )
 }
 
 # Each check_* prints nothing on success (return 0) or a fix hint on stdout (return 1).
@@ -90,13 +96,66 @@ check_codex() {
     fi
 }
 
+# resolve_push_target - set REMOTE_HOST and REMOTE_SLUG from origin's PUSH url
+# (the URL Phase 5 pushes to; it can differ from the fetch url). Returns 1 with a hint on stdout.
+# Handles git@host:owner/repo.git | https://[user[:pass]@]host[:port]/owner/repo(.git) | ssh://git@host[:port]/owner/repo
+# The raw url can embed credentials: userinfo is dropped before host/slug are derived and the raw url
+# is never echoed, so no hint or request path can carry it.
+resolve_push_target() {
+    local url rest authority hostport
+    url="$(git remote get-url --push origin 2>/dev/null)" || {
+        echo "no origin remote in $(pwd) - run from inside the project repo"
+        return 1
+    }
+    REMOTE_HOST=""
+    REMOTE_SLUG=""
+    case "$url" in
+        *://*)
+            rest="${url#*://}"
+            authority="${rest%%/*}"
+            [ "$authority" = "$rest" ] && rest="" || rest="${rest#*/}"
+            hostport="${authority##*@}"
+            REMOTE_HOST="${hostport%%:*}"
+            REMOTE_SLUG="$rest"
+            ;;
+        *:*)
+            authority="${url%%:*}"
+            REMOTE_HOST="${authority##*@}"
+            REMOTE_SLUG="${url#*:}"
+            ;;
+    esac
+    url=""
+    REMOTE_SLUG="${REMOTE_SLUG%.git}"
+    REMOTE_SLUG="${REMOTE_SLUG%/}"
+    case "$REMOTE_SLUG" in
+        */*) ;;
+        *)
+            echo "cannot parse owner/repo from origin push url (value withheld)"
+            return 1
+            ;;
+    esac
+    if [ -z "$REMOTE_HOST" ]; then
+        echo "cannot parse host from origin push url (value withheld)"
+        return 1
+    fi
+}
+
 check_gh_auth() {
     if ! command -v gh >/dev/null 2>&1; then
         echo "gh not on PATH - install GitHub CLI (brew install gh)"
         return 1
     fi
-    if ! run_timeout "$TIMEOUT" gh auth status >/dev/null 2>&1; then
-        echo "gh not authenticated - run: gh auth login"
+    # Test only the active account on the host Phase 5 pushes to; a stale login for another
+    # account or host must not block the run. No origin yet -> fall back to the active account on any host.
+    local args=(auth status --active)
+    REMOTE_HOST=""
+    if resolve_push_target >/dev/null; then
+        args+=(--hostname "$REMOTE_HOST")
+    else
+        REMOTE_HOST=""
+    fi
+    if ! run_timeout "$TIMEOUT" gh "${args[@]}" >/dev/null 2>&1; then
+        echo "gh not authenticated${REMOTE_HOST:+ for $REMOTE_HOST} - run: gh auth login${REMOTE_HOST:+ --hostname $REMOTE_HOST}"
         return 1
     fi
 }
@@ -106,34 +165,26 @@ check_gh_push() {
         echo "gh not on PATH - install GitHub CLI (brew install gh)"
         return 1
     fi
-    local url slug
-    url="$(git remote get-url origin 2>/dev/null)" || {
-        echo "no origin remote in $(pwd) - run from inside the project repo"
-        return 1
-    }
-    # git@github.com:owner/repo.git | https://github.com/owner/repo(.git) | ssh://git@github.com/owner/repo
-    slug="$(printf '%s' "$url" | sed -E 's#^(ssh://)?(git@|https?://)?([^/:]+)[:/]##; s#\.git$##; s#/+$##')"
-    case "$slug" in
-        */*) ;;
-        *)
-            echo "cannot parse owner/repo from origin '$url'"
-            return 1
-            ;;
-    esac
+    resolve_push_target || return 1
     local push
-    push="$(run_timeout "$TIMEOUT" gh api "repos/$slug" --jq '.permissions.push' 2>/dev/null)" || {
-        echo "gh api repos/$slug failed - check gh auth and that the repo exists/is visible to the active account"
+    push="$(run_timeout "$TIMEOUT" gh api --hostname "$REMOTE_HOST" "repos/$REMOTE_SLUG" --jq '.permissions.push' 2>/dev/null)" || {
+        echo "gh api repos/$REMOTE_SLUG on $REMOTE_HOST failed - check gh auth for $REMOTE_HOST and that the repo exists/is visible to the active account"
         return 1
     }
     if [ "$push" != "true" ]; then
-        echo "active gh account cannot push to $slug - run: gh auth switch (or gh auth login with the right account)"
+        echo "active gh account on $REMOTE_HOST cannot push to $REMOTE_SLUG - run: gh auth switch --hostname $REMOTE_HOST (or gh auth login with the right account)"
         return 1
     fi
 }
 
 CHECKS=(munin validation_vm codex gh_auth gh_push)
 
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/devops-checks.XXXXXX")"
+# Without a scratch dir the result files below would land in filesystem-root paths and every
+# check would read back as failed, so stop here with the real cause instead.
+if ! TMP="$(mktemp -d "${TMPDIR:-/tmp}/devops-checks.XXXXXX")" || [ -z "$TMP" ] || [ ! -d "$TMP" ]; then
+    echo "devops-checks.sh: cannot create temporary directory under ${TMPDIR:-/tmp} - free space or fix permissions" >&2
+    exit 2
+fi
 trap 'rm -rf "$TMP"' EXIT
 
 # Run all checks in parallel; each writes its hint to $TMP/<name>.out and rc to $TMP/<name>.rc.

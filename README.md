@@ -83,7 +83,7 @@ Every `start takt` begins with `lib/devops-checks.sh` (installed as `~/.claude/l
 takt enforces strict information boundaries between agents. This is the key architectural property that prevents workers from gaming verification.
 
 ```
-/takt or /spec (human reviews both files)
+/takt (human reviews both files)
     |-- sprint.json          -> session agent -> workers (implement + commit)
     +-- .takt/scenarios.json -> verifier ONLY
                                     |
@@ -96,7 +96,7 @@ takt enforces strict information boundaries between agents. This is the key arch
 
 | File | Session Agent | Worker | Verifier | Review Gate | Retro |
 |------|--------------|--------|----------|-------------|-------|
-| `sprint.json` | reads, writes snapshot | in-place workers update their own story (`passes`, times, `attempts`) | never | never | reads snapshot |
+| `sprint.json` | reads, writes snapshot | in-place workers update their own story (`passes`, times, `attempts`) | never | reads (acceptance criteria for the functional lens) | reads snapshot |
 | `.takt/scenarios.json` | passes path only | **never** | reads | **never** | never |
 | `bugs.json` | never | fix workers read their entry | reads + writes every cycle | never | never |
 | `review-comments.json` | reads `SF-*` for the PR body | fix workers read their entry | never | reads + writes every cycle | never |
@@ -182,7 +182,7 @@ start takt
 - **Unified review gate** — the `skeptic` relay (Codex gpt-6.2-sol high, one direct sonnet re-review as fallback) reviews `.takt/review.diff` (the diff of the feature branch against its base) through three lenses (functional, technical, security). Re-run between review-fix cycles.
 - **Cycle-aware findings** — `bugs.json` and `review-comments.json` keep every entry with `cycle` and `status` (`open`/`fixed`/`dismissed`). The next cycle reads the file first, confirms open items, never re-litigates fixed ones. Fix workers are pointed at their entry and never edit the file. Should-fix suggestions (`SF-*`) go into the PR body, or into the project TODO file when `gh` is missing.
 - **Per-stage timing** — verifier, gate, merge and commit agents report start/finish; the Workflow returns `timing`; the session writes `.takt/run-report.json`; the retro splits overhead into verify, gate, fixes and merge and keeps running averages in `.takt/stats.json`.
-- **External worker support** — story workers can be dispatched via an external CLI (e.g. OpenCode) from `.takt/config.json`. Verifier, review gate, and retro always use Claude.
+- **External worker support** — story workers can be dispatched via an external CLI (e.g. OpenCode) from `.takt/config.json`. Verifier and retro always use Claude; the review gate runs on Codex (direct Claude re-review only as fallback).
 - **Direct implementation** — BDD scenarios (verified by an independent agent) are the quality gate, not TDD.
 
 Deprecated aliases `takt solo` and `takt team` also work — they read the same `run.md`.
@@ -206,7 +206,7 @@ Triggered automatically after each run completes. Timing per stage accumulates i
 
 | File | Purpose | Created by | Visible to |
 |------|---------|------------|------------|
-| `sprint.json` | Stories, waves, dependencies, and per-story complexity (`"simple"` or `"complex"` — controls worker model selection: Haiku for simple, Sonnet for complex); workers write `passes`, `startTime`, `endTime`, `attempts` — ephemeral, never committed | `/takt` command + human review | Session agent, workers |
+| `sprint.json` | Stories, waves, dependencies, and per-story complexity (`"simple"` or `"complex"` — controls worker model selection: Haiku for simple, Sonnet for complex); workers write `passes`, `startTime`, `endTime`, `attempts` — ephemeral, never committed | `/takt` command + human review | Session agent, workers, review gate |
 | `.takt/scenarios.json` | Hidden BDD scenarios (Given/When/Then) for verification | `/takt` command + human review | Verifier only |
 | `.takt/review.diff` | Unified diff for code review (ephemeral) | Review gate agent | Review gate |
 | `bugs.json` | Behavioral bug tickets with id, cycle, status (`open`/`fixed`/`dismissed`); kept across verify cycles | Verifier agent | Next verifier cycle, fix workers |
