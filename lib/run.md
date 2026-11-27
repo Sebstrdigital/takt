@@ -109,6 +109,7 @@ Build `args`:
 | `baseBranch` | `"main"` unless the project's default branch differs |
 | `taktLib` | absolute path of `~/.claude/lib/takt` (expand `~`) |
 | `stories` | `jq '[.userStories[] | select(.passes == false)]' sprint.json` (full story objects) |
+| `verifyOnly` | omit normally. For a verify-only rerun (every story already `passes: true`) pass `stories: []` plus `verifyOnly: true` — the script skips Phase 2 and goes straight to verification and the gate. `stories: []` without `verifyOnly: true` makes the script throw |
 | `waves` | `sprint.json.waves` filtered to incomplete stories, **converted to an array of id arrays** — `[["US-001","US-002"],["US-003"]]`, not the `{wave, stories}` objects sprint.json stores (the script does `w.filter(...)` on each wave); omit if empty; one id per wave when the submodule check fired. Known limitation (2026-09-28): waves with 2+ stories run in Workflow worktrees cut from the HEAD at workflow launch, so a later multi-story wave does not see earlier waves' merges — keep dependent stories in single-story waves, or relaunch the remainder after wave 1 |
 | `workerRunner` | `.takt/session.json.worker_runner` |
 | `externalCmd` | `.takt/session.json.worker_runner_external_cmd` (or `""`) |
