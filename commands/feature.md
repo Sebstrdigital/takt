@@ -17,8 +17,9 @@ Create detailed Feature docs through a gated what/why/why-not flow using AskUser
 2. **Gate: Why** — Confirm motivation and problem
 3. **Gate: What** — Confirm scope and technical decisions
 4. **Gate: What Not** — Confirm explicit exclusions
-5. Write the Feature doc
-6. **Gate: Review** — Present summary and offer conversion to sprint.json
+5. **Gate: Environment** — Confirm what "real use" means for this project
+6. Write the Feature doc (with a mandatory Scope section)
+7. **Gate: Review** — Present summary and offer conversion to sprint.json
 
 **Important:** Do NOT start implementing. Just create the Feature doc.
 
@@ -80,7 +81,7 @@ If the feature involves genuine technical choices (not ones you can answer from 
 
 Use **AskUserQuestion** to confirm explicit exclusions.
 
-Based on the confirmed scope, present what you're explicitly excluding. This maps directly to the Feature doc's Non-Goals section.
+Based on the confirmed scope, present what you're explicitly excluding. This becomes the Out of scope part of the Feature doc's Scope section.
 
 ```
 AskUserQuestion:
@@ -95,9 +96,30 @@ AskUserQuestion:
       description: "I'll move items back into scope"
 ```
 
-## Step 5: Write Feature Doc
+## Step 5: Gate — Environment
 
-Based on the confirmed why/what/what-not, write the Feature doc. No gate needed — just write it using the confirmed answers.
+Use **AskUserQuestion** to confirm the real environment. Reviewers and verifiers judge findings against it, so a finding that only holds outside this environment is out of bounds.
+
+Fill it from CLAUDE.md and the codebase where you can (OS, runtime, hosting, accounts, services, versions). Ask the user for anything you cannot fill.
+
+```
+AskUserQuestion:
+  question: "Here's the environment I'll treat as real use. Is this correct?"
+  header: "Environment"
+  options:
+    - label: "Yes, that's the environment"
+      description: "<bulleted list: platforms, runtimes, services, accounts, versions>"
+    - label: "Adjust environment"
+      description: "I'll correct or extend the list based on your feedback"
+    - label: "I'll describe it"
+      description: "I'll ask you to describe where this actually runs"
+```
+
+If an In scope or Out of scope part is empty after the earlier gates, ask the user for it too. Never invent a Scope part to fill a gap and never leave one out.
+
+## Step 6: Write Feature Doc
+
+Based on the confirmed why/what/what-not/environment, write the Feature doc. No gate needed — just write it using the confirmed answers.
 
 ### Feature Doc Structure
 
@@ -107,7 +129,27 @@ Brief description of the feature and the problem it solves.
 #### 2. Goals
 Specific, measurable objectives (bullet list).
 
-#### 3. User Stories
+#### 3. Scope (mandatory)
+A `## Scope` section with exactly three parts, populated from the confirmed gates. `/sprint` copies it into `sprint.json`, and the review gate and verifier judge against it. A Feature doc without all three parts is not finished.
+
+- **In scope** — what this Feature changes (from the "What" gate). Bullet list.
+- **Out of scope** — what it explicitly does not change (from the "What Not" gate). Bullet list.
+- **Environment** — what "real use" means for this project: platforms, runtimes, services, accounts, versions (from the "Environment" gate). Bullet list.
+
+```markdown
+## Scope
+
+**In scope**
+- <what this Feature changes>
+
+**Out of scope**
+- <what it explicitly leaves alone>
+
+**Environment (what "real use" means for this project)**
+- <platform, runtime, services, versions>
+```
+
+#### 4. User Stories
 Each story needs:
 - **Title:** Short descriptive name
 - **Description:** "As a [user], I want [feature] so that [benefit]"
@@ -161,30 +203,30 @@ Each story needs:
 - **BAD: 7-10 tiny stories for a feature that could be 3-4 broader ones.** Fewer stories = less overhead, faster delivery.
 - **BAD: Implementation checklists as acceptance criteria.** "Add column", "Create file", "Update function" are implementation tasks, not verifiable behavioral outcomes.
 
-#### 4. Functional Requirements
+#### 5. Functional Requirements
 Numbered list of specific functionalities:
 - "FR-1: The system must allow users to..."
 - "FR-2: When a user clicks X, the system must..."
 
 Be explicit and unambiguous.
 
-#### 5. Non-Goals (Out of Scope)
-What this feature will NOT include. Populated from the confirmed "What Not" gate.
+#### 6. Non-Goals
+Optional detail on exclusions. Must agree with the Out of scope part of Scope and never replaces it.
 
-#### 6. Design Considerations (Optional)
+#### 7. Design Considerations (Optional)
 - UI/UX requirements
 - Link to mockups if available
 - Relevant existing components to reuse
 
-#### 7. Technical Considerations (Optional)
+#### 8. Technical Considerations (Optional)
 - Known constraints or dependencies
 - Integration points with existing systems
 - Performance requirements
 
-#### 8. Success Metrics
+#### 9. Success Metrics
 How will success be measured?
 
-#### 9. Open Questions
+#### 10. Open Questions
 Remaining questions or areas needing clarification.
 
 ---
@@ -249,11 +291,21 @@ Here's an example of a Feature doc written at the right scope — describing a c
 - FR-2: Queries that yield 0 results display a helpful message: "No tasks match your filters"
 - FR-3: Filter UI is responsive and works on mobile
 
-**Non-Goals:**
+**Scope:**
+
+*In scope*
+- Filtering by status and priority, sorting by due date and priority, clearing filters
+- Persisting filter and sort state in the browser
+
+*Out of scope*
 - Saving named filter presets
 - Complex filter logic (AND vs OR combinations)
 - Filtering by assignee or tags (future feature)
 - Custom sort orders
+
+*Environment*
+- Web app in current desktop and mobile browsers, state in localStorage
+- No backend changes
 
 ---
 
@@ -281,7 +333,7 @@ The Feature doc reader may be a junior developer or AI agent. Therefore:
 
 ---
 
-## Step 6: Gate — Review
+## Step 7: Gate — Review
 
 After writing the Feature doc, present a summary and use **AskUserQuestion** to offer next steps:
 
@@ -313,8 +365,10 @@ Before saving the Feature doc:
 - [ ] Confirmed "why" via AskUserQuestion gate
 - [ ] Confirmed "what" (scope) via AskUserQuestion gate
 - [ ] Confirmed "what not" (exclusions) via AskUserQuestion gate
+- [ ] Confirmed environment via AskUserQuestion gate
+- [ ] **Scope section present with all three parts (In scope, Out of scope, Environment), each non-empty; any part you could not fill was asked of the user**
 - [ ] Feature targets initiative scope: will produce 4-8 stories when converted by /sprint (if fewer than 3, consider merging with a sibling Feature)
 - [ ] Max 3-4 acceptance criteria per story, all behavioral outcomes
 - [ ] Functional requirements are numbered and unambiguous
-- [ ] Non-goals section populated from confirmed exclusions
+- [ ] Non-goals (if kept) agree with the Out of scope part of Scope
 - [ ] Saved to `tasks/feature-[feature-name].md`
