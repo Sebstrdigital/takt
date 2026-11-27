@@ -1,0 +1,5 @@
+{
+  "final_gate": true,
+  "local_validation": true,
+  "worker_runner": "anthropic"
+}
