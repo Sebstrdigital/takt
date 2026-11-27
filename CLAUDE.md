@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is takt?
 
-takt is a sprint discipline layer for Claude Code: stories with acceptance criteria, hidden BDD scenarios verified by an independent agent, a Fable review gate, and compounding retros. Primary command: `start takt`. Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
+takt is a sprint discipline layer for Claude Code: stories with acceptance criteria, hidden BDD scenarios verified by an independent agent, a unified 3-lens review gate (functional, technical, security) run on Codex through the `skeptic` relay, and compounding retros. Primary command: `start takt`. Also supports debug and retro modes. Based on [Geoffrey Huntley's Ralph Wiggum pattern](https://ghuntley.com/ralph/).
 
 There is no bash script or CLI binary. The user says "start takt" in Claude Code. The session agent reads `run.md`, prepares the run, and hands stories / verification / review gate to the `takt-run` Workflow script (`lib/takt-run.js`). Claude Code's native Agent and Workflow tools provide the orchestration mechanics; takt provides the process and state model.
 
@@ -39,7 +39,7 @@ The `/sprint` slash command is ONLY for converting Feature docs to sprint.json. 
 
 **CRITICAL — Execution Rule:** On `start takt` the session agent MUST read `~/.claude/lib/takt/run.md` first and execute it itself. Never spawn the orchestrator as a sub-agent, never echo the phrase back, never ask for confirmation. Story execution happens inside the Workflow tool (`scriptPath: ~/.claude/lib/takt/takt-run.js`), which is an approved use of Workflow — no separate opt-in is needed.
 
-**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `builder` for worktree merges; workers commit their own stories. Verifier and retro use `general-purpose` + `sonnet`; the review gate uses `general-purpose` + `fable`. Never invent other agent types.
+**Agent roster:** takt uses the shared named agents in `~/.claude/agents/` (source: `claude-tools/agents/`): `grunt` (haiku) for `complexity: "simple"` stories, `builder` (sonnet) for complex, `heavy` (opus) for the single retry, `builder` for worktree merges; workers commit their own stories. Verifier and retro use `general-purpose` + `sonnet`; the review gate runs on Codex (`gpt-6.2-sol` high) through the `skeptic` relay, with a direct Sonnet review as fallback when Codex is unavailable or declines the security lens. Never invent other agent types.
 
 Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`.
 
@@ -50,7 +50,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 1. User says "start takt"
 2. Session agent reads `~/.claude/lib/takt/run.md`
 3. Phase 0-1: config, tool probes, feature branch, ETA from `.takt/stats.json`, one start line
-4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), workers that commit their own story (and, in place, update `sprint.json`), plus a merge stage for parallel waves that merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the 4-pass Fable gate with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
+4. Phase 2-4: one `Workflow` call running `takt-run.js` — waves of fresh workers (parallel waves in per-story worktrees), workers that commit their own story (and, in place, update `sprint.json`), plus a merge stage for parallel waves that merges/removes worktrees and updates `sprint.json`, the hidden-scenario verifier with a verify-fix loop, the unified 3-lens Codex gate (skeptic relay, Sonnet fallback) with a review-fix loop. Deterministic JS control flow, resumable via `resumeFromRunId`.
 5. Phase 4b-7: local validation (interactive), PR, auto-retro, final report — session agent
 6. Output: start line + final report only
 
@@ -59,7 +59,7 @@ Slash commands: `/takt`, `/epic`, `/feature`, `/sprint`. Install: `./install.sh`
 - `lib/takt-run.js` -> `~/.claude/lib/takt/takt-run.js` - Workflow script: stories, verify, gate
 - `lib/worker.md` -> `~/.claude/lib/takt/worker.md` - Worker prompt
 - `agents/verifier.md` -> `~/.claude/lib/takt/verifier.md` - Scenario verification agent
-- `lib/final-gate.md` -> `~/.claude/lib/takt/final-gate.md` - Review gate (conventions + SRE + security + adversary)
+- `lib/final-gate.md` -> `~/.claude/lib/takt/final-gate.md` - Review gate mechanics (3 lenses: functional, technical, security; lens definitions in `~/.claude/docs/review-lenses.md`)
 - `lib/tooling.md` -> `~/.claude/lib/takt/tooling.md` - Optional tooling config (jCodeMunch + context-mode)
 - `lib/init.md` -> `~/.claude/lib/takt/init.md` - First-run config prompts
 - `lib/debug.md` -> `~/.claude/lib/takt/debug.md` - retired; routes `takt debug` to /diagnose
@@ -131,7 +131,7 @@ Keep the repo lean. Every markdown file must justify its presence.
 | Merge stage (worktree waves only) | `builder` | sonnet | Per wave with 2+ stories |
 | Verifier | `general-purpose` | sonnet | Per verify cycle (max 3) |
 | Bug-fix / review-fix worker | `builder` | sonnet | Per bug / must-fix |
-| Review gate | `general-purpose` | fable | Per review cycle (max 2) |
+| Review gate | `skeptic` (Codex `gpt-6.2-sol` high) | Codex; fallback `general-purpose` + sonnet | Per review cycle (max 2) |
 | Local validation | `builder` | sonnet | Per run, if enabled |
 | Retro agent | `general-purpose` | sonnet | Per run |
 

@@ -23,6 +23,7 @@ Before anything else, from the project root, run:
 
 It prints one JSON object `{"munin": bool, "validation_vm": bool, "codex": bool, "gh_auth": bool, "gh_push": bool}` and exits 1 if any check failed. Hold the object for 0.4.
 
+- **Preflight crashes → STOP.** If `devops-checks.sh` exits with a code other than 0 or 1, or its output is not a JSON object, STOP. Print its stderr and output verbatim, do not touch `sprint.json`, and do not start the Workflow.
 - **Any check `false` → STOP.** Name every check that was `false` in the object. Run `~/.claude/lib/takt/devops-checks.sh` (no flag) once more and print every `FAIL <name>: <fix hint>` line verbatim. If a check that was `false` has no `FAIL` line in the rerun (it recovered between runs), still name it and say it failed on the first run and may be transient. Then tell the user to fix them and say "start takt" again. Do not continue Phase 0, do not touch `sprint.json`, do not start the Workflow.
 - All `true` → continue silently.
 
