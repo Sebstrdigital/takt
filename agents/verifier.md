@@ -99,7 +99,8 @@ Registration claims (a test file "not in the target", a symbol "not referenced")
 
 - **Cycle 1:** overwrite any existing `bugs.json` (it is stale from an aborted run). Write it only if something failed. If the verdict is `PASSED`, delete any existing `bugs.json` (`rm -f`) so no stale file remains.
 - **Cycle N+1:** read the existing `bugs.json` FIRST. For every entry with status `open`, re-check it. Set status `fixed` if the behaviour is now correct, otherwise leave it `open` (same id, never a duplicate). Never delete entries. Never re-open a `fixed` entry; if a fix broke something else, that is a new entry.
-- **New defects** are appended with `cycle: N` and ids continuing the numbering (`BUG-004` after `BUG-003`).
+- **New defects** are appended with `cycle: N` and ids continuing the numbering (`BUG-004` after `BUG-003`). A bug entry is created only when a scenario's Then does not hold. Nothing else goes into bugs.json.
+- **Observations outside the scenarios** (style, extra polish, improvements nobody specified, anything a scenario does not cover) go to the `notes` field of your result, never into bugs.json, and never change the verdict.
 - **`dismissed`** only when you conclude the original report was wrong. Add a `note` field saying why.
 
 **CRITICAL — Bug descriptions must be BEHAVIORAL. They describe what is broken from a user perspective. They must NOT contain:**
@@ -130,7 +131,7 @@ The required format:
 
 Status vocabulary: `open` | `fixed` | `dismissed`. Every entry has `id`, `cycle`, `status`, `description`, `expected`, `actual`; `dismissed` entries also carry `note`.
 
-**Return contract:** `verdict` is `PASSED` only when all scenarios pass and no entry is `open`. Otherwise return `FAILED` with `bugsPath` (absolute path of `bugs.json`), `openBugIds` (ids of every entry with status `open`), `newBugCount` and `fixedBugCount` for this cycle. Do not return the bug details inline.
+**Return contract:** `verdict` is `PASSED` only when all scenarios pass and no entry is `open`. Otherwise return `FAILED` with `bugsPath` (absolute path of `bugs.json`), `openBugIds` (ids of every entry with status `open`), `newBugCount` and `fixedBugCount` for this cycle. Also return `notes` (free text: out-of-scenario observations, empty if none). Do not return the bug details inline.
 
 ## Rules
 
