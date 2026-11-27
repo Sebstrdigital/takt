@@ -1,47 +1,47 @@
 {
-  "runs": 4,
+  "runs": 5,
   "stories": {
     "bySize": {
       "small": {
-        "count": 7,
+        "count": 11,
         "fastest": 12,
         "slowest": 115,
-        "avg": 59
+        "avg": 51
       },
       "medium": {
-        "count": 4,
-        "fastest": 62,
+        "count": 5,
+        "fastest": 24,
         "slowest": 179,
-        "avg": 99
+        "avg": 84
       }
     }
   },
   "overhead": {
-    "avg": 1118,
-    "count": 2
+    "avg": 1445,
+    "count": 3
   },
   "updatedAt": "2026-11-27T00:00:00Z",
   "retries": {
-    "scheduled": 5,
-    "retried": 0,
+    "scheduled": 10,
+    "retried": 1,
     "blockedAfterRetry": 0
   },
   "phases": {
     "verify": {
-      "count": 2,
-      "avg": 35
-    },
-    "gate": {
-      "count": 2,
-      "avg": 412
-    },
-    "fixes": {
-      "count": 10,
+      "count": 4,
       "avg": 29
     },
+    "gate": {
+      "count": 6,
+      "avg": 316
+    },
+    "fixes": {
+      "count": 15,
+      "avg": 27
+    },
     "mergeCommit": {
-      "count": 2,
-      "avg": 5
+      "count": 4,
+      "avg": 3
     }
   }
 }

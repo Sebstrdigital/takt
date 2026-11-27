@@ -80,3 +80,41 @@
 - Fix workers: 10, 287s total
 - Merge/commit agents: 2, 9s total
 - Unattributed overhead: 1826s
+
+---
+
+## Retro: 2026-11-27 — takt/review-scope
+
+### What Went Well
+- All 5 stories passed; 4 of 5 on the first attempt. Verify passed in 1 cycle both times (24s and 21s) with scenarios present.
+- Workers recorded decisions with file references (US-002 verified model name against skeptic.md:5; US-005 confirmed `notes` was already in the VERDICT schema), so no rework from misreading scope.
+- MF-001 (cycle 2 fix range used stale `git log --grep` and missed untracked files) was caught by the gate and fixed with a per-cycle baseline.
+
+### What Didn't Go Well
+- US-002 needed the heavy retry: attempt 1 had correct edits but did not commit, treating the CLAUDE.md install.sh HARD RULE as a hard block (workbook US-002).
+- The gate ended BLOCKED after 2 cycles in both Workflow runs, with MF-002 and MF-003 still open on edge cases in the fix-only re-review diff in lib/takt-run.js. Cycle 2 of the first run reviewed without the MF-001..004 fixes because the commit stage refused.
+- Unattributed overhead was 2099s: the verify-only rerun and manual commit approval sat between the two Workflow runs.
+
+### Patterns Observed
+- Repeat from the previous entry: gate does not converge in 2 cycles and new must-fix items appear in cycle 2.
+- Repeat: the story run needed a second, verify-only Workflow run.
+- install.sh ask-before-commit rule blocks automated commits (US-002 attempt 1, US-004/US-005 workbooks all flag it).
+
+### Tooling issues
+- The Workflow review-fix commit stage refused to commit because of the install.sh ask-before-commit rule in CLAUDE.md (run-report.json: commits[review-1].committed=false, gate.note); needs a takt-run exception. The session agent committed as a750521 after user approval.
+- US-002 attempt 1 hit the same rule in the story worker and cost a heavy retry.
+- git push over ssh port 22 timed out once; the retry succeeded.
+
+### Project follow-ups
+- MF-002 and MF-003: edge cases in the fix-only re-review diff in lib/takt-run.js, left open by the gate.
+- Commit stage and story workers should be allowed to commit prompt-source changes despite the install.sh rule.
+
+### Metrics
+- Stories: 5/5 passed, 0 blocked; retried on heavy: 1 (blocked after retry: 0)
+- Total workbooks: 9
+- Avg story duration: 37s (small, 4), 24s (medium, 1), n/a (large)
+- Verify: 2 cycles, 45s total
+- Gate: 4 cycles, 1071s total
+- Fix workers: 5, 114s total
+- Merge/commit agents: 2, 1s total
+- Unattributed overhead: 2099s

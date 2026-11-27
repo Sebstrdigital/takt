@@ -23,6 +23,7 @@ Before anything else, from the project root, run:
 
 It prints one JSON object `{"munin": bool, "validation_vm": bool, "codex": bool, "gh_auth": bool, "gh_push": bool}` and exits 1 if any check failed. Hold the object for 0.4.
 
+- **Preflight crashes → STOP.** If `devops-checks.sh` exits with a code other than 0 or 1, or its output is not a JSON object, STOP. Print its stderr and output verbatim, do not touch `sprint.json`, and do not start the Workflow.
 - **Any check `false` → STOP.** Name every check that was `false` in the object. Run `~/.claude/lib/takt/devops-checks.sh` (no flag) once more and print every `FAIL <name>: <fix hint>` line verbatim. If a check that was `false` has no `FAIL` line in the rerun (it recovered between runs), still name it and say it failed on the first run and may be transient. Then tell the user to fix them and say "start takt" again. Do not continue Phase 0, do not touch `sprint.json`, do not start the Workflow.
 - All `true` → continue silently.
 
@@ -109,6 +110,7 @@ Build `args`:
 | `baseBranch` | `"main"` unless the project's default branch differs |
 | `taktLib` | absolute path of `~/.claude/lib/takt` (expand `~`) |
 | `stories` | `jq '[.userStories[] | select(.passes == false)]' sprint.json` (full story objects) |
+| `verifyOnly` | omit normally. For a verify-only rerun (every story already `passes: true`) pass `stories: []` plus `verifyOnly: true` — the script skips Phase 2 and goes straight to verification and the gate. `stories: []` without `verifyOnly: true` makes the script throw |
 | `waves` | `sprint.json.waves` filtered to incomplete stories, **converted to an array of id arrays** — `[["US-001","US-002"],["US-003"]]`, not the `{wave, stories}` objects sprint.json stores (the script does `w.filter(...)` on each wave); omit if empty; one id per wave when the submodule check fired. Known limitation (2026-09-28): waves with 2+ stories run in Workflow worktrees cut from the HEAD at workflow launch, so a later multi-story wave does not see earlier waves' merges — keep dependent stories in single-story waves, or relaunch the remainder after wave 1 |
 | `workerRunner` | `.takt/session.json.worker_runner` |
 | `externalCmd` | `.takt/session.json.worker_runner_external_cmd` (or `""`) |
@@ -179,10 +181,10 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 
 1. `command -v gh` missing → do step 6, then skip to Phase 6.
 2. `git push -u origin <branchName>`
-3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration. If `review-comments.json` exists, read it and append a section `## Review suggestions (should-fix)` with one line per `SF-*` entry: ``- SF-00n `file:line` — finding``. No `SF-*` entries → omit the section.
+3. Body: summary, stories completed, verification result, gate summary, `suggestionCount`, duration. If `review-comments.json` exists, read it and append a section `## Review suggestions (should-fix)` with one line per `SF-*` entry: ``- SF-00n `file:line` — finding``. No `SF-*` entries → omit the section. If `review-comments.json` has a non-empty `follow_ups` list, append a section `## Follow-up ideas` with one line per entry: `- <follow-up>`. Empty or missing list → omit the section.
 4. `--draft` if `gate.suggestionCount > 0`.
-5. `gh pr create --title "feat: <summary>" --body "<body>" [--draft]` → capture URL.
-6. **No PR (`gh` missing)** — before Phase 6 cleanup deletes `review-comments.json`, append the same `SF-*` list to the project's TODO file: the first of `TODO.md` or `docs/TODO.md` that exists, else create `TODO.md` in the project root, under `## takt review suggestions — <branchName> — <YYYY-MM-DD>` (skip if there are no `SF-*` entries). Not on a stop condition: a stop keeps the files for resume.
+5. Write the assembled body to `.takt/pr-body.md` with the Write tool (literal data — never interpolate it into a shell command, heredoc or quoted argument), then `gh pr create --title "feat: <summary>" --body-file .takt/pr-body.md [--draft]` → capture URL, then `rm -f .takt/pr-body.md` (ephemeral, never committed).
+6. **No PR (`gh` missing)** — before Phase 6 cleanup deletes `review-comments.json`, append the same `SF-*` list to the project's TODO file: the first of `TODO.md` or `docs/TODO.md` that exists, else create `TODO.md` in the project root, under `## takt review suggestions — <branchName> — <YYYY-MM-DD>` (skip if there are no `SF-*` entries; also append any `follow_ups` as a `Follow-up ideas` list under the same heading). Not on a stop condition: a stop keeps the files for resume.
 
 ---
 
@@ -223,7 +225,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
    On a stop condition, replace `takt complete` with `takt stopped` and add one line per open bug id / must-fix id / blocked story.
 3. **Stale artifact safety net** — if the retro ran and any of these still exist, delete them:
    ```bash
-   rm -f sprint.json .takt/sprint-snapshot.json .takt/scenarios.json .takt/review.diff .takt/validation-report.md .takt/run-report.json bugs.json review-comments.json
+   rm -f sprint.json .takt/sprint-snapshot.json .takt/scenarios.json .takt/review.diff .takt/review-base-* .takt/validation-report.md .takt/run-report.json bugs.json review-comments.json
    ```
    Do NOT delete them on a stop condition — the user needs them to resume.
 
@@ -235,7 +237,7 @@ Skip silently if `.takt/session.json.local_validation` is `false`. If `true` but
 2. **Session cwd = project git root** — Workflow worktrees are keyed to it.
 3. **Never read `.takt/scenarios.json`** — only the verifier inside the workflow does.
 4. **Agents from the roster** — workers `grunt` (simple) / `builder` (complex) / `heavy` (retry); `builder` for worktree merges (workers commit their own stories); verifier and retro `general-purpose` + `sonnet`; gate `skeptic` (Codex relay, Sonnet fallback). Defined in `~/.claude/agents/`, shared with the `/orchestrator` skill.
-5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`, `.takt/run-report.json`.
+5. **Ephemeral files are never committed** — `sprint.json`, `bugs.json`, `review-comments.json`, `.takt/workbooks/`, `.takt/scenarios.json`, `.takt/session.json`, `.takt/review.diff`, `.takt/review-base-*`, `.takt/sprint-snapshot.json`, `.takt/validation-report.md`, `.takt/run-report.json`.
 6. **Kill agents you spawn directly** — `TaskStop` the validation and retro agents as soon as you have their result. Workflow agents are managed by the Workflow tool.
 7. **Never kill tmux panes.**
 8. **Silent execution** — print only: any `[takt warn]` lines, the start line, the final report. No phase headers, no narration, no diff commentary.

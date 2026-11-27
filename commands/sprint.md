@@ -33,7 +33,7 @@ When invoked **without** a specific Feature doc argument (e.g. the user just say
    ```
 3. **Wait for confirmation.** If the user says no or selects a subset, adjust accordingly.
 4. **If confirmed**, process each Feature doc in alphabetical filename order, collecting all stories.
-5. **Renumber IDs globally** — see ID Renumbering section below.
+5. **Renumber IDs globally** — see ID Renumbering section below. Merge the Feature docs' Scope sections (see Scope below).
 6. **Compute a single wave plan** across all stories from all docs — see Wave Planning section.
 7. **Write sprint.json** and `.takt/scenarios.json`.
 8. **Print a merge summary** — see Merge Summary section.
@@ -78,6 +78,17 @@ Merged 3 Feature docs:
 
 ---
 
+## Scope
+
+Every Feature doc must have a `## Scope` section with three parts: **In scope**, **Out of scope**, **Environment**. `/sprint` copies it into `sprint.json` as a top-level `scope` object of string arrays. The review gate and verifier read it and judge only inside it.
+
+- One bullet becomes one string. Keep the wording; do not summarise or add items.
+- **A Feature doc without a Scope section, or with a part missing or empty, fails conversion.** Stop, name the doc and the missing parts, and tell the user to add them (`/feature` asks for them) or give them now. Do not write `sprint.json` until all three parts are filled. Never invent a part.
+- **Multi-doc mode:** concatenate each part across the docs in alphabetical filename order and drop exact duplicates.
+- **Reconcile conflicts before saving (multi-doc).** An **Out of scope** item from one doc that a selected doc delivers (in its In scope list or its stories) must not stay in the merged `scope.out`: the review gate sends anything in `scope.out` to follow-ups, even when a selected story requires it. Drop such an item from the merged `scope.out`. If it is unclear whether the combined sprint should deliver it, ask the user and wait; do not write `sprint.json` until it is resolved.
+
+---
+
 ## Follow-ups Check
 
 If the project's TODO file (`TODO.md` or `docs/TODO.md`, whichever exists) has one or more sections whose heading starts with `## takt follow-ups`, tell the user how many items they hold and offer to include any as stories. Do not add them automatically and do not create the file.
@@ -97,6 +108,11 @@ Take a Feature doc (markdown file or text) and convert it to `sprint.json` in th
   "project": "[Project Name]",
   "branchName": "takt/[feature-name-kebab-case]",
   "description": "[Feature description from Feature doc title/intro]",
+  "scope": {
+    "in": ["[In scope bullet from the Feature doc]"],
+    "out": ["[Out of scope bullet from the Feature doc]"],
+    "environment": ["[Environment bullet from the Feature doc]"]
+  },
   "userStories": [
     {
       "id": "US-001",
@@ -319,7 +335,8 @@ Frontend stories are NOT complete until visually verified. takt will use Chrome 
 10. **dependsOn assignment**: Identify dependencies between stories. Set `"dependsOn": []` for independent stories.
 11. **Wave computation**: If 6+ stories with 2+ independent chains, compute `waves` from `dependsOn` graph.
 12. **Scenario generation**: After writing sprint.json, generate `.takt/scenarios.json` with 2-5 BDD scenarios per story (see Scenario Generation section). Scenarios describe observable behavioral outcomes, not implementation details. Create `.takt/` directory if it does not exist.
-13. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
+13. **Scope**: Copy the Feature doc's Scope section into top-level `scope: { in, out, environment }` (see Scope section). Fail conversion if the section or any part is missing.
+14. **Known issues**: If the project has pre-existing failures (broken builds, flaky tests, incomplete migrations), add them to relevant stories as `"knownIssues": ["description of issue"]`. This prevents workers from wasting time diagnosing problems they didn't introduce. Leave as `[]` when there are no known issues.
 
 ---
 
@@ -350,6 +367,18 @@ Each is one focused change that can be completed and verified independently.
 
 Add ability to mark tasks with different statuses.
 
+## Scope
+
+**In scope**
+- Task status field, toggle, badge and list filter
+
+**Out of scope**
+- Bulk status changes
+- Status history
+
+**Environment**
+- Web app in current desktop browsers, PostgreSQL via migrations
+
 ## Requirements
 - Toggle between pending/in-progress/done on task list
 - Filter list by status
@@ -363,6 +392,11 @@ Add ability to mark tasks with different statuses.
   "project": "TaskApp",
   "branchName": "takt/task-status",
   "description": "Task Status Feature - Track task progress with status indicators",
+  "scope": {
+    "in": ["Task status field, toggle, badge and list filter"],
+    "out": ["Bulk status changes", "Status history"],
+    "environment": ["Web app in current desktop browsers, PostgreSQL via migrations"]
+  },
   "userStories": [
     {
       "id": "US-001",
@@ -552,6 +586,8 @@ Bad scenario (copy-pasted criterion):
 
 Before writing sprint.json, verify:
 
+- [ ] **Every Feature doc has a Scope section with In scope, Out of scope and Environment, each non-empty — a Feature doc without one fails the checklist; do not write sprint.json**
+- [ ] **scope** copied into sprint.json as `{ "in": [..], "out": [..], "environment": [..] }` (string arrays; in multi-doc mode merged across docs)
 - [ ] **branchName matches Feature doc filename** (e.g., `feature-dark-mode.md` → `takt/dark-mode`). In multi-doc mode, branchName is confirmed with the user.
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
